@@ -1,0 +1,21 @@
+[package]
+name = "gain"
+version = "0.1.0"
+authors = ["Timo Savola <timo.savola@iki.fi>"]
+description = "Async/await/futures-based framework for programs targetting Gate runtime. Requires nightly Rust."
+documentation = "https://docs.rs/gain"
+homepage = "https://github.com/tsavola/gate/blob/master/README.md"
+repository = "https://github.com/tsavola/gain"
+keywords = ["await", "futures", "gate", "runtime", "webassembly"]
+categories = ["api-bindings", "asynchronous", "wasm"]
+license = "BSD-3-Clause"
+
+[dependencies]
+bincode = "^1.0.0"
+futures-await = "^0.1.0"
+serde = "^1.0.0"
+serde_derive = "^1.0.0"
+
+[[example]]
+name = "hello"
+crate-type = ["cdylib"]

@@ -1,13 +1,4 @@
-*.bc
-*.o
-*.s
-*.wast
-
-prog.*
-
-/bin/
-/config.mk
-/lib/
-/pkg/
-/src/
-/tmp/
+*.rs.bk
+Cargo.lock
+config.mk
+target
