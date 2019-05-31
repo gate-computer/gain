@@ -1,13 +1,11 @@
-CARGO		:= cargo +nightly
-GATERUN		:= ../gate/bin/gate-run
+CARGO		:= cargo
+GATE		:= gate
 
-TARGET		:= wasm32-unknown-unknown
+TARGET		:= wasm32-wasi
 
-FUNCTION	:= main
+FUNCTION	:=
 
 -include config.mk
-
-export RUSTFLAGS
 
 debug:
 	$(CARGO) build --target=$(TARGET) --examples
@@ -18,10 +16,10 @@ release:
 all: debug release
 
 check: debug
-	$(GATERUN) -c function=$(FUNCTION) target/$(TARGET)/debug/examples/hello.wasm
+	$(GATE) call -d target/$(TARGET)/debug/examples/hello.wasm $(FUNCTION)
 
 check-release: release
-	$(GATERUN) -c function=$(FUNCTION) target/$(TARGET)/release/examples/hello.wasm
+	$(GATE) call target/$(TARGET)/release/examples/hello.wasm $(FUNCTION)
 
 check-all: check check-release
 

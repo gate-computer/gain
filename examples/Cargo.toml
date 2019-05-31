@@ -1,0 +1,12 @@
+[package]
+name = "examples"
+version = "0.0.0"
+publish = false
+edition = "2018"
+
+[dev-dependencies]
+gain = { path = "../gain" }
+
+[[example]]
+name = "hello"
+path = "hello.rs"

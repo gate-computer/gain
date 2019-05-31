@@ -1,4 +1,5 @@
 *.rs.bk
+.cargo
 Cargo.lock
 config.mk
 target
