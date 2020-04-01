@@ -17,9 +17,11 @@ all: debug release
 
 check: debug
 	$(GATE) call -d target/$(TARGET)/debug/examples/hello.wasm $(FUNCTION)
+	/bin/echo -e "+ 1 2\n+ 2 3\ncatalog" | $(GATE) call -d target/$(TARGET)/debug/examples/lep.wasm
 
 check-release: release
 	$(GATE) call target/$(TARGET)/release/examples/hello.wasm $(FUNCTION)
+	/bin/echo -e "+ 1 2\n+ 2 3\ncatalog" | $(GATE) call target/$(TARGET)/release/examples/lep.wasm
 
 check-all: check check-release
 

@@ -6,7 +6,13 @@ edition = "2018"
 
 [dev-dependencies]
 gain = { path = "../gain" }
+gain-lep = { path = "../gain-lep" }
+lep = "*"
 
 [[example]]
 name = "hello"
 path = "hello.rs"
+
+[[example]]
+name = "lep"
+path = "lep.rs"
