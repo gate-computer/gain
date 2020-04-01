@@ -63,6 +63,16 @@ impl Buf {
     pub fn as_slice(&self) -> &[u8] {
         self.data.as_slice()
     }
+
+    /// Remove bytes from the buffer.
+    pub fn consume(&mut self, n: usize) {
+        self.data = self.data.split_off(n);
+    }
+
+    /// Remove all bytes from the buffer.
+    pub fn consume_all(&mut self) {
+        self.data = Vec::new();
+    }
 }
 
 impl io::Read for Buf {
