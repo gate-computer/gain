@@ -2,6 +2,7 @@
 members = [
   "gain",
   "gain-lep",
+  "gain-localhost",
 
   "examples",
 ]

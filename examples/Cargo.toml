@@ -7,6 +7,7 @@ edition = "2018"
 [dev-dependencies]
 gain = { path = "../gain" }
 gain-lep = { path = "../gain-lep" }
+gain-localhost = { path = "../gain-localhost", features = ["lep"] }
 lep = "*"
 
 [[example]]
@@ -16,3 +17,7 @@ path = "hello.rs"
 [[example]]
 name = "lep"
 path = "lep.rs"
+
+[[example]]
+name = "localhost"
+path = "localhost.rs"

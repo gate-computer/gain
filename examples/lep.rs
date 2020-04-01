@@ -20,6 +20,7 @@ fn main() {
 async fn handle(conn: RecvWriteStream) {
     let mut domain = Domain::new();
     gain_lep::register(&mut domain);
+    gain_localhost::lep::register(&mut domain);
 
     repl(conn, domain, State::new()).await;
 }
