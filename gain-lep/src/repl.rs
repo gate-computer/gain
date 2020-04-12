@@ -70,7 +70,7 @@ pub async fn repl_default<'a, DefaultFn: Fn() -> Vec<u8>>(
         }
 
         if let Some(input) = input {
-            if input.is_empty() {
+            if input.trim_start().is_empty() {
                 output = String::from_utf8_lossy(&default_reply().as_slice()).to_string();
             } else {
                 match eval_stmt(&mut domain, state.clone(), &input) {

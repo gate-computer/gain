@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use gain::origin;
-use gain::stream::{RecvWriteStream, Write};
+use gain::stream::RecvWriteStream;
 use gain::task::block_on;
 use gain_lep::repl;
 use lep::{Domain, State};
@@ -17,15 +17,7 @@ fn main() {
     });
 }
 
-async fn handle(mut conn: RecvWriteStream) {
-    match conn.write_all("welcome\n".as_bytes()).await {
-        Ok(()) => {}
-        Err(e) => {
-            println!("write error: {}", e);
-            return;
-        }
-    }
-
+async fn handle(conn: RecvWriteStream) {
     let mut domain = Domain::new();
     gain_lep::register(&mut domain);
 
