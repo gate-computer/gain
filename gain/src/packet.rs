@@ -56,7 +56,12 @@ pub fn code(p: &[u8]) -> Code {
 
 #[inline]
 pub fn domain(p: &[u8]) -> Domain {
-    p[6]
+    p[6] & 15
+}
+
+#[inline]
+pub fn index(p: &[u8]) -> usize {
+    p[7] as usize
 }
 
 #[inline]

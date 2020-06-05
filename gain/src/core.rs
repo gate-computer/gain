@@ -281,6 +281,29 @@ impl SendList {
             None
         }
     }
+
+    fn remove(&mut self, index: usize) -> SendLink {
+        if index == 0 {
+            self.pop_front().unwrap()
+        } else {
+            unsafe { self.remove_nonzero_index(index) }
+        }
+    }
+
+    unsafe fn remove_nonzero_index(&mut self, index: usize) -> SendLink {
+        let mut prev = self.front;
+        for _ in 1..index {
+            prev = prev.as_mut().unwrap().next;
+        }
+        let mut prev_share = prev.as_mut().unwrap();
+        let mut old = prev_share.next.take();
+        let old_share = old.as_mut().unwrap();
+        prev_share.next = old_share.next.take();
+        if prev_share.next.is_none() {
+            self.back = prev;
+        }
+        old
+    }
 }
 
 impl Default for SendList {
@@ -1035,6 +1058,7 @@ fn process_received() {
     let p = &p[..size];
     let code = packet::code(p);
     let domain = packet::domain(p);
+    let index = packet::index(p);
     let mut future_consumer = false;
 
     if code == CODE_SERVICES {
@@ -1094,7 +1118,7 @@ fn process_received() {
         match domain {
             DOMAIN_CALL => {
                 let mut service_states = SERVICE_STATES.borrow_mut();
-                let mut link = service_states[code as usize].replies.pop_front().unwrap();
+                let mut link = service_states[code as usize].replies.remove(index);
                 let share = link.as_mut().unwrap();
 
                 future_consumer = true;
