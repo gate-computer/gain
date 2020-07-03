@@ -9,6 +9,7 @@
 use std::convert::TryInto;
 use std::fmt;
 
+use crate::error::ErrorCode;
 use crate::service::Service;
 use crate::stream::RecvWriteStream;
 
@@ -24,9 +25,8 @@ const ACCEPT_REPLY_SIZE: usize = 8;
 #[derive(Debug)]
 pub struct AcceptError(i16);
 
-impl AcceptError {
-    /// Get the raw error code.
-    pub fn as_i16(&self) -> i16 {
+impl ErrorCode for AcceptError {
+    fn as_i16(&self) -> i16 {
         self.0
     }
 }

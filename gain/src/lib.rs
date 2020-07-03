@@ -46,6 +46,7 @@ extern crate lazy_static;
 
 pub mod catalog;
 mod core;
+pub mod error;
 mod gate;
 pub mod origin;
 mod packet;
