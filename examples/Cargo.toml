@@ -5,6 +5,7 @@ publish = false
 edition = "2018"
 
 [dev-dependencies]
+futures = "0.3.0"
 gain = { path = "../gain" }
 gain-lep = { path = "../gain-lep" }
 gain-localhost = { path = "../gain-localhost", features = ["lep"] }
@@ -21,3 +22,7 @@ path = "lep.rs"
 [[example]]
 name = "localhost"
 path = "localhost.rs"
+
+[[example]]
+name = "peer"
+path = "peer.rs"
