@@ -38,6 +38,7 @@ lazy_static! {
 struct ServiceState {
     avail_or_blocked: SendList,
     replies: SendList,
+    info_recv: Recv,
 }
 
 impl ServiceState {
@@ -45,6 +46,7 @@ impl ServiceState {
         Self {
             avail_or_blocked: SendList::default(),
             replies: SendList::default(),
+            info_recv: Recv::None,
         }
     }
 
@@ -550,6 +552,111 @@ where
 
         if this.polling {
             die("call future dropped before completion");
+        }
+    }
+}
+
+/// Asynchronous info packet reception.  Must be polled to completion once
+/// started.
+#[must_use = "futures do nothing unless you `.await` or poll them"]
+pub struct InfoRecvFuture<R>
+where
+    R: Fn(&[u8]) + Unpin,
+{
+    code: Code,
+    receptor: R,
+}
+
+impl<R> InfoRecvFuture<R>
+where
+    R: Fn(&[u8]) + Unpin,
+{
+    pub(crate) fn new(code: Code, receptor: R) -> Self {
+        Self { code, receptor }
+    }
+}
+
+impl<R> Future for InfoRecvFuture<R>
+where
+    R: Fn(&[u8]) + Unpin,
+{
+    type Output = io::Result<()>;
+
+    fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
+        let mut service_states = SERVICE_STATES.borrow_mut();
+        let service = &mut service_states[self.code as usize];
+
+        if let Recv::Some(offset) = take(&mut service.info_recv) {
+            let mut recv_buf = RECV_BUF.borrow_mut();
+            (self.receptor)(&recv_buf.consume(offset)[HEADER_SIZE..]);
+        }
+
+        service.info_recv = Recv::Wake(cx.waker().clone());
+        Poll::Pending
+    }
+}
+
+/// Asynchronous info packet send.  Must be polled to completion.
+#[must_use = "futures do nothing unless you `.await` or poll them"]
+pub struct InfoSendFuture<'a> {
+    share: Share,
+    header: [u8; HEADER_SIZE],
+    _content: PhantomData<&'a [u8]>,
+    polling: bool,
+}
+
+impl<'a> InfoSendFuture<'a> {
+    pub(crate) fn new(code: Code, content: &'a [u8]) -> Self {
+        let mut this = Self {
+            share: Share::default(),
+            header: [0; HEADER_SIZE],
+            _content: PhantomData,
+            polling: false,
+        };
+        let len = this.header.len() + content.len();
+        packet::header_into(&mut this.header, len, code, DOMAIN_INFO);
+        // Header may move before polling, so its address cannot be taken yet.
+        this.share.send[1] = Ciovec::new(content);
+        this
+    }
+}
+
+impl Future for InfoSendFuture<'_> {
+    type Output = ();
+
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
+        if !self.polling {
+            self.share.send[0] = Ciovec::new(&self.header);
+            let mut link = Some(SendLink::new(&mut self.share));
+
+            let code = self.share.code();
+            if code >= 0 {
+                let mut service_states = SERVICE_STATES.borrow_mut();
+                if let Some(list) = service_states[code as usize].blocked() {
+                    list.push_back(link.take().unwrap());
+                }
+            }
+
+            if let Some(link) = link.take() {
+                SEND_LIST.borrow_mut().push_back(link);
+            }
+        } else if self.share.is_sent() {
+            self.polling = false;
+            return Poll::Ready(());
+        }
+
+        self.share.waker = Some(cx.waker().clone());
+        self.polling = true;
+        Poll::Pending
+    }
+}
+
+impl Drop for InfoSendFuture<'_> {
+    fn drop(&mut self) {
+        let this = unsafe { Pin::new_unchecked(self) }; // See pin module doc.
+
+        if this.polling {
+            die("info future dropped before completion");
         }
     }
 }
@@ -1126,6 +1233,25 @@ fn process_received() {
                 if let Some(w) = share.waker.take() {
                     w.wake();
                 }
+            }
+
+            DOMAIN_INFO => {
+                let mut service_states = SERVICE_STATES.borrow_mut();
+                let service = &mut service_states[code as usize];
+
+                match take(&mut service.info_recv) {
+                    Recv::None => {
+                        service.info_recv = Recv::Some(recv_buf.head.off);
+                    }
+                    Recv::Wake(w) => {
+                        service.info_recv = Recv::Some(recv_buf.head.off);
+                        w.wake();
+                    }
+                    Recv::Some(_) => {
+                        // Don't overwrite unhandled offset.
+                    }
+                }
+                future_consumer = true;
             }
 
             DOMAIN_FLOW => {

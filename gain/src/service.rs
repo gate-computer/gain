@@ -10,6 +10,8 @@ use crate::stream::{RecvStream, RecvWriteStream, WriteStream};
 
 pub mod future {
     pub use crate::core::CallFuture as Call;
+    pub use crate::core::InfoRecvFuture as InfoRecv;
+    pub use crate::core::InfoSendFuture as InfoSend;
 }
 
 /// Reason for service registration failure.
@@ -52,6 +54,19 @@ impl Service {
         R: FnOnce(&[u8]) -> T + Unpin,
     {
         future::Call::new(self.code, content, receptor)
+    }
+
+    /// Receive info packets from the service repeatedly.  Returns a future.
+    pub fn recv_info<R>(&self, receptor: R) -> future::InfoRecv<R>
+    where
+        R: Fn(&[u8]) + Unpin,
+    {
+        future::InfoRecv::new(self.code, receptor)
+    }
+
+    /// Send an info packet to the service.  Returns a future.
+    pub fn send_info<'a>(&self, content: &'a [u8]) -> future::InfoSend<'a> {
+        future::InfoSend::new(self.code, content)
     }
 
     /// Construct a handle to a new bidirectional stream.
