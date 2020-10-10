@@ -31,8 +31,8 @@
 //!
 //! ## Service APIs
 //!
-//! The [`catalog`](catalog) and [`origin`](origin) modules provide access to
-//! the built-in Gate services.
+//! The [`catalog`](catalog), [`identity`](identity) and [`origin`](origin)
+//! modules provide access to the built-in Gate services.
 //!
 //! Common I/O stream types are defined in the [`stream`](stream) module.
 //!
@@ -48,6 +48,7 @@ pub mod catalog;
 mod core;
 pub mod error;
 mod gate;
+pub mod identity;
 pub mod origin;
 mod packet;
 pub mod service;

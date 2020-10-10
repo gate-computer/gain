@@ -6,13 +6,19 @@
 
 use gain::stream::{Close, Write};
 use gain::task::{block_on, spawn};
-use gain::{catalog, origin};
+use gain::{catalog, identity, origin};
 
 async fn do_stuff() {
     println!("Accepting origin connection");
     let mut conn = origin::accept().await.unwrap();
     println!("Origin connection accepted");
-    conn.write_all("hello, world\n".as_bytes()).await.unwrap();
+    let who = match identity::principal_id().await {
+        Some(s) => s,
+        None => "world".to_string(),
+    };
+    conn.write_all(format!("hello, {}\n", who).as_bytes())
+        .await
+        .unwrap();
     let (_, w) = conn.split();
     let (mut w, mut c) = w.split();
     w.write_all(&catalog::json().await.as_bytes())
