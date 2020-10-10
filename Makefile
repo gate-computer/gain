@@ -7,25 +7,23 @@ FUNCTION	:=
 
 -include config.mk
 
+.PHONY: debug
 debug:
 	$(CARGO) build --target=$(TARGET) --examples
 
+.PHONY: release
 release:
 	$(CARGO) build --target=$(TARGET) --examples --release
 
+.PHONY: all
 all: debug release
 
-check: debug
-	$(GATE) call -d target/$(TARGET)/debug/examples/hello.wasm $(FUNCTION)
-	/bin/echo -e "+ 1 2\n+ 2 3\ncatalog" | $(GATE) call -d target/$(TARGET)/debug/examples/lep.wasm
+.PHONY: check
+check: check-debug check-release
+check-%: %
+	$(GATE) call -d target/$(TARGET)/$*/examples/hello.wasm $(FUNCTION)
+	/bin/echo -e "+ 1 2\n+ 2 3\ncatalog" | $(GATE) call -d target/$(TARGET)/$*/examples/lep.wasm
 
-check-release: release
-	$(GATE) call target/$(TARGET)/release/examples/hello.wasm $(FUNCTION)
-	/bin/echo -e "+ 1 2\n+ 2 3\ncatalog" | $(GATE) call target/$(TARGET)/release/examples/lep.wasm
-
-check-all: check check-release
-
+.PHONY: clean
 clean:
 	rm -rf target Cargo.lock
-
-.PHONY: debug release all check check-release check-all clean
