@@ -11,6 +11,7 @@ pub use lep::{obj, Domain, Fun, FunMut, Name, Obj, Pair, Ref, Res};
 pub mod catalog;
 pub mod display;
 pub mod future;
+pub mod identity;
 pub mod origin;
 mod repl;
 pub mod stream;
@@ -29,6 +30,7 @@ pub fn register(d: &mut Domain) {
     lep::builtin::register(d);
     stream::register(d);
     catalog::register(d);
+    identity::register(d);
     origin::register(d);
 }
 
