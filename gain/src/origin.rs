@@ -17,26 +17,6 @@ lazy_static! {
     static ref SERVICE: Service = Service::register("origin");
 }
 
-const ACCEPT_REPLY_SIZE: usize = 8;
-
-/// Reason for connection acceptance failure.
-///
-/// No reasons have been defined yet.
-#[derive(Debug)]
-pub struct AcceptError(i16);
-
-impl ErrorCode for AcceptError {
-    fn as_i16(&self) -> i16 {
-        self.0
-    }
-}
-
-impl fmt::Display for AcceptError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        self.0.fmt(f)
-    }
-}
-
 /// Accept a new incoming connection.
 ///
 /// The call is blocked while no connection is available, or the
@@ -48,16 +28,42 @@ impl fmt::Display for AcceptError {
 pub async fn accept() -> Result<RecvWriteStream, AcceptError> {
     SERVICE
         .call(&[], |reply: &[u8]| {
-            if reply.len() < ACCEPT_REPLY_SIZE {
-                return Err(AcceptError(0));
+            if reply.len() < 8 {
+                return Err(AcceptError::new(0));
             }
 
             let error = i16::from_le_bytes(reply[4..6].try_into().unwrap());
             if error != 0 {
-                return Err(AcceptError(error));
+                return Err(AcceptError::new(error));
             }
 
             Ok(SERVICE.stream(i32::from_le_bytes(reply[..4].try_into().unwrap())))
         })
         .await
+}
+
+/// Reason for connection acceptance failure.
+///
+/// No reasons have been defined yet.
+#[derive(Debug)]
+pub struct AcceptError {
+    code: i16,
+}
+
+impl AcceptError {
+    fn new(code: i16) -> Self {
+        Self { code }
+    }
+}
+
+impl ErrorCode for AcceptError {
+    fn as_i16(&self) -> i16 {
+        self.code
+    }
+}
+
+impl fmt::Display for AcceptError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        self.code.fmt(f)
+    }
 }
