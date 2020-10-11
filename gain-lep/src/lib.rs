@@ -13,6 +13,8 @@ pub mod display;
 pub mod future;
 pub mod identity;
 pub mod origin;
+pub mod peer;
+pub mod peerindex;
 mod repl;
 pub mod stream;
 
@@ -32,6 +34,8 @@ pub fn register(d: &mut Domain) {
     catalog::register(d);
     identity::register(d);
     origin::register(d);
+    peer::register(d);
+    peerindex::register(d);
 }
 
 fn wrong_number_of_arguments() -> Res {
