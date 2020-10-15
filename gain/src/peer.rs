@@ -19,13 +19,14 @@ use crate::threadunsafe::ThreadUnsafeRefCell;
 
 lazy_static! {
     static ref SERVICE: Service = Service::register("peer");
-    static ref GROUPS: ThreadUnsafeRefCell<HashMap<String, Box<dyn Fn(&str)>>> = Default::default();
-    static ref CONNS: ThreadUnsafeRefCell<HashMap<String, Sender<RecvWriteStream>>> =
+    static ref GROUPS: ThreadUnsafeRefCell<HashMap<Vec<u8>, Box<dyn Fn(&str, &str)>>> =
+        Default::default();
+    static ref CONNS: ThreadUnsafeRefCell<HashMap<(Vec<u8>, Vec<u8>), Sender<(RecvWriteStream, String)>>> =
         Default::default();
 }
 
 /// Register a peer group implementation.
-pub async fn register_group(group_name: &str, listener: Box<dyn Fn(&str)>) {
+pub async fn register_group(group_name: &str, listener: Box<dyn Fn(&str, &str)>) {
     let mut groups = GROUPS.borrow_mut();
     let init = groups.is_empty();
 
@@ -39,70 +40,101 @@ pub async fn register_group(group_name: &str, listener: Box<dyn Fn(&str)>) {
     }
 }
 
+fn parse_name<'a>(b: &'a [u8]) -> (&'a [u8], &'a [u8]) {
+    let size = b[0] as usize;
+    let b = &b[1..];
+    let name = &b[..size];
+    let b = &b[size..];
+    (name, b)
+}
+
 async fn handle_info_packets() {
     SERVICE
-        .recv_info(|content: &[u8]| {
-            let id = i32::from_le_bytes(content[..4].try_into().unwrap());
-            let name = str::from_utf8(&content[4..]).unwrap();
+        .recv_info(|b: &[u8]| {
+            let id = i32::from_le_bytes(b[..4].try_into().unwrap());
+            let b = &b[8..];
+            let (group_name, b) = parse_name(b);
+            let (peer_name, b) = parse_name(b);
+            let (type_name, _) = parse_name(b);
+
             if id < 0 {
-                let i = name.find(':').unwrap();
-                let group_name = &name[..i];
                 let groups = GROUPS.borrow();
-                groups[group_name](name);
+                groups[group_name](
+                    str::from_utf8(peer_name).unwrap(),
+                    str::from_utf8(type_name).unwrap(),
+                );
             } else {
                 let stream = SERVICE.stream(id);
                 let mut conns = CONNS.borrow_mut();
-                drop(conns.remove(name).unwrap().send(stream));
+                let _ = conns
+                    .remove(&(group_name.into(), peer_name.into()))
+                    .unwrap()
+                    .send((stream, String::from_utf8(type_name.into()).unwrap()));
             }
         })
         .await
         .unwrap();
 }
 
-/// Connect to a peer.
-pub async fn connect(qualified_name: &str) -> Result<RecvWriteStream, ConnectError> {
+/// Connect to a peer within a group.  Specify the incoming content type.  The
+/// outgoing content type is returned along with the stream.
+pub async fn connect(
+    group_name: &str,
+    peer_name: &str,
+    type_name: &str,
+) -> Result<(RecvWriteStream, String), ConnectError> {
+    let group_name = group_name.as_bytes();
+    if group_name.len() > 255 {
+        panic!("group name is too long");
+    }
+
+    let peer_name = peer_name.as_bytes();
+    if peer_name.len() > 255 {
+        panic!("peer name is too long");
+    }
+
+    let type_name = type_name.as_bytes();
+    if type_name.len() > 255 {
+        panic!("type name is too long");
+    }
+
     let (sender, receiver) = channel();
 
     {
         let mut conns = CONNS.borrow_mut();
-        if conns.get(qualified_name).is_some() {
+        let key = (group_name.into(), peer_name.into());
+        if conns.get(&key).is_some() {
             return Err(ConnectError::already_connecting());
         }
-        conns.insert(qualified_name.into(), sender);
+        conns.insert(key, sender);
     }
 
-    match SERVICE
-        .call(
-            qualified_name.as_bytes(),
-            |reply: &[u8]| -> Result<(), ConnectError> {
-                if reply.len() < 2 {
-                    return Err(ConnectError::new(0));
-                }
+    let mut buf =
+        Vec::with_capacity(8 + 1 + group_name.len() + 1 + peer_name.len() + 1 + type_name.len());
+    buf.resize(8, 0); // Reserved.
+    buf.push(group_name.len() as u8);
+    buf.extend_from_slice(group_name);
+    buf.push(peer_name.len() as u8);
+    buf.extend_from_slice(peer_name);
+    buf.push(type_name.len() as u8);
+    buf.extend_from_slice(type_name);
 
-                let error = i16::from_le_bytes(reply[..2].try_into().unwrap());
-                if error != 0 {
-                    return Err(ConnectError::new(error));
-                }
+    SERVICE
+        .call(buf.as_slice(), |buf: &[u8]| -> Result<(), ConnectError> {
+            if buf.len() < 2 {
+                return Err(ConnectError::new(0));
+            }
 
-                Ok(())
-            },
-        )
-        .await
-    {
-        Ok(()) => Ok(receiver.await.unwrap()),
-        Err(e) => Err(e),
-    }
-}
+            let error = i16::from_le_bytes(buf[..2].try_into().unwrap());
+            match error {
+                0 => Ok(()),
+                1 => panic!("ABI violation"),
+                _ => Err(ConnectError::new(error)),
+            }
+        })
+        .await?;
 
-/// Connect to a peer.  Group name is specified separately.
-pub async fn connect_group(
-    group_name: &str,
-    short_name: &str,
-) -> Result<RecvWriteStream, ConnectError> {
-    let mut name = group_name.to_string();
-    name.push(':');
-    name.push_str(short_name);
-    connect(&name).await
+    Ok(receiver.await.unwrap())
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -131,11 +163,11 @@ impl ConnectError {
 
     pub fn kind(&self) -> ConnectErrorKind {
         match self.code {
-            1 => ConnectErrorKind::GroupNotFound,
-            2 => ConnectErrorKind::PeerNotFound,
-            3 => ConnectErrorKind::Singularity,
-            4 => ConnectErrorKind::AlreadyConnecting,
-            5 => ConnectErrorKind::AlreadyConnected,
+            2 => ConnectErrorKind::GroupNotFound,
+            3 => ConnectErrorKind::PeerNotFound,
+            4 => ConnectErrorKind::Singularity,
+            5 => ConnectErrorKind::AlreadyConnecting,
+            6 => ConnectErrorKind::AlreadyConnected,
             _ => ConnectErrorKind::Other,
         }
     }

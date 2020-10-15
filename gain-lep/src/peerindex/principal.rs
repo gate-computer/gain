@@ -20,7 +20,7 @@ pub fn register(d: &mut Domain) {
 pub fn principal(args: &Obj) -> Res {
     if args.is::<()>() {
         return Ok(future_obj(async {
-            match peerindex::principal::instance_names().await {
+            match peerindex::principal::instances().await {
                 Ok(mut v) => {
                     let mut list = obj::nil();
                     while let Some(s) = v.pop() {

@@ -14,7 +14,7 @@ fn main() {
         let friends = RefCell::new(Vec::new());
         let befriender = friends.clone();
 
-        peerindex::principal::register(Box::new(move |name: &str| {
+        peerindex::principal::register(Box::new(move |name: &str, _: &str| {
             befriender.borrow_mut().push(name.to_string());
         }))
         .await;

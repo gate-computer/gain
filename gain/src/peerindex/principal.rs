@@ -21,22 +21,13 @@ lazy_static! {
 /// Register this program instance in the index.  The listener is invoked when
 /// a peer tries to connect and there isn't an ongoing connection process with
 /// that peer.
-pub async fn register(listener: Box<dyn Fn(&str)>) {
+pub async fn register(listener: Box<dyn Fn(&str, &str)>) {
     peer::register_group(GROUP_NAME, listener).await;
     SERVICE.send_info(&[]).await;
 }
 
-/// List peers without group name prefixes.
-pub async fn instance_names() -> Result<Vec<String>, Error> {
-    get_instance_names(false).await
-}
-
-/// List peers with group name prefixes.
-pub async fn qualified_instance_names() -> Result<Vec<String>, Error> {
-    get_instance_names(true).await
-}
-
-async fn get_instance_names(qualify: bool) -> Result<Vec<String>, Error> {
+/// List peers.
+pub async fn instances() -> Result<Vec<String>, Error> {
     SERVICE
         .call(&[], |reply: &[u8]| {
             if reply.len() < 4 {
@@ -54,18 +45,10 @@ async fn get_instance_names(qualify: bool) -> Result<Vec<String>, Error> {
             let mut reply = &reply[4..];
 
             for _ in 0..count {
-                let namelen = reply[0] as usize;
+                let size = reply[0] as usize;
                 reply = &reply[1..];
-
-                let mut name = String::new();
-                if qualify {
-                    name.push_str(GROUP_NAME);
-                    name.push(':');
-                }
-                name.push_str(str::from_utf8(&reply[..namelen]).unwrap());
-                reply = &reply[namelen..];
-
-                list.push(name);
+                list.push(String::from_utf8(reply[..size].into()).unwrap());
+                reply = &reply[size..];
             }
 
             Ok(list)
