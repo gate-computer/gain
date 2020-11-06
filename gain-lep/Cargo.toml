@@ -1,6 +1,6 @@
 [package]
 name = "gain-lep"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Timo Savola <timo.savola@iki.fi>"]
 edition = "2018"
 description = "Support for exposing Gain APIs via Lep."
@@ -12,5 +12,5 @@ categories = ["api-bindings", "asynchronous"]
 license = "BSD-3-Clause"
 
 [dependencies]
-gain = { version = "0.2.1", path = "../gain" }
+gain = { version = ">=0.3.0, <1", path = "../gain" }
 lep = "0.4.4"
