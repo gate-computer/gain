@@ -954,6 +954,7 @@ pub fn register_service(name: &'static str) -> Result<Code, RegistrationError> {
 
     let code = service_states.len() as Code;
     service_states.push(ServiceState::new_unavail());
+    println!("gain: service #{} name {:?}", code, name);
     Ok(code)
 }
 
@@ -1183,12 +1184,16 @@ fn process_received() {
                     }
 
                     if avail {
+                        println!("gain: service #{} available", i);
+
                         let mut old_blocked = service.set_avail_unchecked();
 
                         while let Some(x) = old_blocked.pop_front() {
                             send_list.push_back(x);
                         }
                     } else {
+                        println!("gain: service #{} unavailable", i);
+
                         let new_blocked = service.set_unavail_unchecked();
 
                         let mut prev = SendLink::none();
