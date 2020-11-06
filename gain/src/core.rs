@@ -669,7 +669,8 @@ where
 {
     s: &'a Option<Stream>,
     receptor: R,
-    cap: usize,
+    unsubscribed: u64, // Requested by client code but flow packet not sent.
+    unreceived: i32,   // Flow packet sent but data unreceived.
     flow_share: Share,
     flow_packet: [u8; HEADER_SIZE + FLOW_SIZE],
 }
@@ -679,22 +680,29 @@ where
     R: Fn(&[u8]) -> usize + Unpin,
 {
     pub(crate) fn new(s: &'a Option<Stream>, cap: usize, receptor: R) -> Self {
-        if cap > i32::max_value() as usize {
-            panic!("reception capacity out of bounds");
-        }
-
         Self {
             s,
             receptor,
-            cap,
+            unsubscribed: cap as u64,
+            unreceived: 0,
             flow_share: Share::default(),
             flow_packet: [0; HEADER_SIZE + FLOW_SIZE],
         }
     }
 
+    fn flow_increment(&self) -> i32 {
+        let max_flow = i32::max_value() - self.unreceived;
+        std::cmp::min(self.unsubscribed, max_flow as u64) as i32
+    }
+
+    fn can_send_flow_packet(&self) -> bool {
+        self.flow_increment() > 0 && self.flow_share.is_sent()
+    }
+
     fn send_flow_packet(&mut self, id: StreamId) {
-        let increment = self.cap as i32;
-        self.cap = 0;
+        let increment = self.flow_increment();
+        self.unsubscribed -= increment as u64;
+        self.unreceived += increment;
         packet::flow_into(&mut self.flow_packet, 0, id, increment);
 
         self.flow_share.sent = 0;
@@ -714,7 +722,7 @@ where
         if let Some(s) = self.s {
             let mut s = s.borrow_mut();
 
-            if self.cap > 0 && self.flow_share.is_sent() {
+            if self.can_send_flow_packet() {
                 let len = self.flow_packet.len();
                 packet::header_into(&mut self.flow_packet, len, s.code, DOMAIN_FLOW);
                 self.flow_share.send[0] = Ciovec::new(&self.flow_packet);
@@ -725,23 +733,23 @@ where
                 let mut recv_buf = RECV_BUF.borrow_mut();
                 let data = &recv_buf.consume(offset)[DATA_HEADER_SIZE..];
 
-                let mut ok = false;
-                if let Some(cap) = self.cap.checked_add((self.receptor)(&data)) {
-                    if cap <= i32::max_value() as usize {
-                        self.cap = cap;
-                        ok = true;
-                    }
+                if data.len() > self.unreceived as usize {
+                    panic!("received data exceeds subscription");
                 }
-                if !ok {
+                self.unreceived -= data.len() as i32;
+
+                if let Some(n) = self.unsubscribed.checked_add((self.receptor)(&data) as u64) {
+                    self.unsubscribed = n;
+                } else {
                     panic!("reception capacity out of bounds");
                 }
 
-                if self.cap > 0 && self.flow_share.is_sent() {
+                if self.can_send_flow_packet() {
                     self.send_flow_packet(s.id);
                 }
             }
 
-            if (s.flags & STREAM_PEER_DATA) != 0 {
+            if (self.unsubscribed > 0 || self.unreceived > 0) && (s.flags & STREAM_PEER_DATA) != 0 {
                 s.recv = Recv::Wake(cx.waker().clone());
                 return Poll::Pending;
             }

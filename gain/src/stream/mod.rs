@@ -20,8 +20,8 @@ pub trait Recv {
     /// The receptor must be prepared to handle as much data as is subscribed
     /// at any given time.
     ///
-    /// The call returns once the stream is closed or the receptor returns
-    /// zero.
+    /// The call returns once the stream is closed or the reception capacity
+    /// drops to zero.
     fn recv<R>(&mut self, capacity: usize, receptor: R) -> future::Recv<R>
     where
         R: Fn(&[u8]) -> usize + Unpin;
