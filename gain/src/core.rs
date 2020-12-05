@@ -669,8 +669,8 @@ where
 {
     s: &'a Option<Stream>,
     receptor: R,
-    unsubscribed: u64, // Requested by client code but flow packet not sent.
-    unreceived: i32,   // Flow packet sent but data unreceived.
+    unsubscribed: u64, // Requested by caller, but flow packet not sent yet.
+    unreceived: i32,   // Flow packet sent, but data not received yet.
     flow_share: Share,
     flow_packet: [u8; HEADER_SIZE + FLOW_SIZE],
 }
@@ -1060,7 +1060,7 @@ fn perform_io() {
                 recv_vec_len = 2;
             }
         } else {
-            // ...rest of packet header only (should not happen in practise).
+            // ...rest of packet header only (should not happen in practice).
             recv_vec[0].buf_len = HEADER_SIZE - packet_head.len();
             recv_vec_len = 1;
         }

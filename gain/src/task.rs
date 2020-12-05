@@ -22,7 +22,7 @@ lazy_static! {
 /// A handle that awaits the result of a task.
 pub type JoinHandle<T> = async_task::JoinHandle<T, ()>;
 
-/// Spawn a task and blocks the program on its result.
+/// Spawn a task and block the program on its result.
 #[inline(always)]
 pub fn block_on<F, T>(future: F) -> T
 where
