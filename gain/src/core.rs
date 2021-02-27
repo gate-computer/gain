@@ -206,10 +206,18 @@ impl StreamState {
     }
 
     fn clear_flags(&mut self, how: StreamFlags) {
+        if (self.flags & how) != how {
+            panic!("stream state does not contain closing flags");
+        }
+
         self.flags &= !how;
     }
 
     fn send_close_packets(&mut self, how: StreamFlags) {
+        if (self.flags & how) != 0 {
+            panic!("stream state still contains closing flags when sending packet");
+        }
+
         let mut send_list = SEND_LIST.borrow_mut();
 
         if (how & STREAM_SELF_FLOW) != 0 {
@@ -905,9 +913,6 @@ impl Future for StreamCloseFuture {
             let mut s = s.borrow_mut();
 
             if how != 0 {
-                if (s.flags & how) != how {
-                    panic!("stream state does not contain closing flags");
-                }
                 s.clear_flags(how);
                 s.send_close_packets(how);
             }
@@ -983,6 +988,7 @@ pub fn init_stream(code: Code, id: StreamId, flags: StreamFlags) -> Option<Strea
 pub fn drop_stream(s: Option<Stream>, how: StreamFlags) {
     if let Some(s) = s {
         let mut s = s.borrow_mut();
+        let how = how & s.flags;
         s.clear_flags(how);
         s.send_close_packets(how);
         s.detach_closed();
