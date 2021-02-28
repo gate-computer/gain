@@ -24,7 +24,8 @@ pub enum RegistrationError {
 /// Handle to a registered service.
 ///
 /// If a stream is opened as a result of service registration or a call, the
-/// appropriate stream constructor must be called immediately.
+/// appropriate stream constructor must be called immediately.  Consequently, a
+/// buffered stream cannot be used to receive data which includes stream ids.
 pub struct Service {
     code: Code,
 }
