@@ -19,11 +19,6 @@ impl<T: Copy> ThreadUnsafeCell<T> {
     }
 
     #[inline]
-    pub fn get(&self) -> T {
-        self.0.get()
-    }
-
-    #[inline]
     pub fn set(&self, val: T) {
         self.0.set(val)
     }

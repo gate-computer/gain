@@ -35,26 +35,22 @@ fn block_on_boxed<F, T>(mut future: Pin<Box<F>>) -> T
 where
     F: Future<Output = T>,
 {
-    let run = Arc::new(ThreadUnsafeCell::new(true));
-    let wake = run.clone();
-    let waker = async_task::waker_fn(move || wake.set(true));
+    let rerun = Arc::new(ThreadUnsafeCell::new(false));
+    let wakerun = rerun.clone();
+    let waker = async_task::waker_fn(move || wakerun.set(true));
     let cx = &mut Context::from_waker(&waker);
 
     loop {
-        if !run.get() && TASKS.borrow().is_empty() {
-            core::io();
+        if let Poll::Ready(result) = future.as_mut().poll(cx) {
+            return result;
         }
 
-        let n = TASKS.borrow().len();
-        for _ in 0..n {
-            let task = TASKS.borrow_mut().pop_front().unwrap();
+        while let Some(task) = TASKS.borrow_mut().pop_front() {
             task.run();
         }
 
-        if run.replace(false) {
-            if let Poll::Ready(x) = future.as_mut().poll(cx) {
-                break x;
-            }
+        if !rerun.replace(false) {
+            core::io();
         }
     }
 }
