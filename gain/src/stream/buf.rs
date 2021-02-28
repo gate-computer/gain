@@ -59,12 +59,17 @@ impl Buf {
         }
     }
 
+    /// Returns the number of buffered bytes.
+    pub fn len(&self) -> usize {
+        self.data.len()
+    }
+
     /// Access the buffered bytes.
     pub fn as_slice(&self) -> &[u8] {
         self.data.as_slice()
     }
 
-    /// Remove bytes from the buffer.
+    /// Remove bytes from the start of the buffer.
     pub fn consume(&mut self, n: usize) {
         self.data = self.data.split_off(n);
     }
@@ -171,7 +176,7 @@ pub mod future {
                 min_read = 1;
             }
 
-            if buf.data.len() >= min_read {
+            if buf.len() >= min_read {
                 Poll::Ready(Ok((m.receptor.take().unwrap())(&mut buf)))
             } else {
                 match buf.result.consume() {
