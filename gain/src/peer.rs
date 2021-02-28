@@ -158,7 +158,7 @@ impl ConnectError {
     }
 
     fn already_connecting() -> Self {
-        Self::new(4)
+        Self::new(5)
     }
 
     pub fn kind(&self) -> ConnectErrorKind {
