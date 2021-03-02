@@ -5,32 +5,20 @@
 //! Buffered I/O streams.
 
 use std::cell::RefCell;
-use std::error;
-use std::fmt;
 use std::io;
 use std::rc::Rc;
 use std::task::Waker;
 
 use crate::stream::{
-    Close, CloseStream, Recv, RecvOnlyStream, RecvStream, RecvWriteStream, Write, WriteOnlyStream,
+    Close, CloseStream, ErrorCode, Recv, RecvOnlyStream, RecvStream, RecvWriteStream, Write,
+    WriteOnlyStream,
 };
-
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub struct ReadError(i32);
-
-impl error::Error for ReadError {}
-
-impl fmt::Display for ReadError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        self.0.fmt(f)
-    }
-}
 
 #[derive(PartialEq)]
 pub(crate) enum BufResult {
     Pending,
     Eof,
-    Err(ReadError),
+    Err(ErrorCode),
 }
 
 /// Read buffer.
@@ -199,7 +187,7 @@ async fn receive(shared: SharedBuf, mut stream: RecvOnlyStream, capacity: usize)
     buf.result = if note == 0 {
         BufResult::Eof
     } else {
-        BufResult::Err(ReadError(note))
+        BufResult::Err(ErrorCode(note))
     };
     if let Some(w) = buf.waker.take() {
         w.wake();
@@ -336,6 +324,10 @@ impl Read for ReadWriteStream {
 impl Write for ReadWriteStream {
     fn write<'a>(&'a mut self, data: &'a [u8]) -> super::future::Write {
         self.w.write(data)
+    }
+
+    fn write_note<'a>(&'a mut self, data: &'a [u8], note: i32) -> super::future::Write {
+        self.w.write_note(data, note)
     }
 
     fn write_all<'a>(&'a mut self, data: &'a [u8]) -> super::future::WriteAll {

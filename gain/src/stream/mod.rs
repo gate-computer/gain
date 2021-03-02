@@ -6,6 +6,8 @@
 
 use crate::core::{self, Stream, StreamFlags};
 
+pub use crate::core::StreamErrorCode as ErrorCode;
+
 pub mod buf;
 
 /// Data subscriber and receiver.
@@ -31,6 +33,9 @@ pub trait Recv {
 pub trait Write {
     /// Write part of a byte slice.  Returns a future.
     fn write<'a>(&'a mut self, data: &'a [u8]) -> future::Write;
+
+    /// Write part of a byte slice.  Returns a future.
+    fn write_note<'a>(&'a mut self, data: &'a [u8], note: i32) -> future::Write;
 
     /// Write a whole byte slice.  Returns a future.
     fn write_all<'a>(&'a mut self, data: &'a [u8]) -> future::WriteAll;
@@ -94,7 +99,11 @@ impl Recv for RecvWriteStream {
 
 impl Write for RecvWriteStream {
     fn write<'a>(&'a mut self, data: &'a [u8]) -> future::Write {
-        future::Write::new(&mut self.s, data)
+        future::Write::new(&mut self.s, data, 0)
+    }
+
+    fn write_note<'a>(&'a mut self, data: &'a [u8], note: i32) -> future::Write {
+        future::Write::new(&mut self.s, data, note)
     }
 
     fn write_all<'a>(&'a mut self, data: &'a [u8]) -> future::WriteAll {
@@ -246,7 +255,11 @@ impl From<RecvWriteStream> for WriteStream {
 
 impl Write for WriteStream {
     fn write<'a>(&'a mut self, data: &'a [u8]) -> future::Write {
-        future::Write::new(&mut self.s, data)
+        future::Write::new(&mut self.s, data, 0)
+    }
+
+    fn write_note<'a>(&'a mut self, data: &'a [u8], note: i32) -> future::Write {
+        future::Write::new(&mut self.s, data, note)
     }
 
     fn write_all<'a>(&'a mut self, data: &'a [u8]) -> future::WriteAll {
@@ -289,7 +302,11 @@ impl Default for WriteOnlyStream {
 
 impl Write for WriteOnlyStream {
     fn write<'a>(&'a mut self, data: &'a [u8]) -> future::Write {
-        future::Write::new(&mut self.s, data)
+        future::Write::new(&mut self.s, data, 0)
+    }
+
+    fn write_note<'a>(&'a mut self, data: &'a [u8], note: i32) -> future::Write {
+        future::Write::new(&mut self.s, data, note)
     }
 
     fn write_all<'a>(&'a mut self, data: &'a [u8]) -> future::WriteAll {

@@ -4,6 +4,8 @@
 
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
+use std::error;
+use std::fmt;
 use std::future::Future;
 use std::io::{self, Error, ErrorKind};
 use std::marker::PhantomData;
@@ -179,6 +181,7 @@ pub struct StreamState {
     recv_err: i32,
     writable: usize,
     writer: Option<Waker>,
+    write_err: i32,
     closers: Vec<Waker>,
 
     close_flow_share: Share,
@@ -198,6 +201,7 @@ impl StreamState {
             recv_err: 0,
             writable: 0,
             writer: None,
+            write_err: 0,
             closers: Vec::new(),
 
             close_flow_share: Share::default(),
@@ -780,6 +784,17 @@ where
     }
 }
 
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct StreamErrorCode(pub i32);
+
+impl error::Error for StreamErrorCode {}
+
+impl fmt::Display for StreamErrorCode {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        self.0.fmt(f)
+    }
+}
+
 /// Asynchronous write.  Must be polled to completion once started.
 #[must_use = "futures do nothing unless you `.await` or poll them"]
 pub struct StreamWriteFuture<'a> {
@@ -787,16 +802,18 @@ pub struct StreamWriteFuture<'a> {
     share: Share,
     header: [u8; DATA_HEADER_SIZE],
     _data: PhantomData<&'a [u8]>,
+    note: i32,
     writing: bool,
 }
 
 impl<'a> StreamWriteFuture<'a> {
-    pub(crate) fn new(s: &'a Option<Stream>, data: &'a [u8]) -> Self {
+    pub(crate) fn new(s: &'a Option<Stream>, data: &'a [u8], note: i32) -> Self {
         let mut this = Self {
             s,
             share: Share::default(),
             header: [0; DATA_HEADER_SIZE],
             _data: PhantomData,
+            note,
             writing: false,
         };
         this.share.send[1] = Ciovec::new(data);
@@ -813,7 +830,14 @@ impl Future for StreamWriteFuture<'_> {
                 let mut s = s.borrow_mut();
 
                 if (s.flags & STREAM_PEER_FLOW) == 0 {
-                    return Poll::Ready(Ok(0));
+                    return Poll::Ready(if s.write_err == 0 {
+                        Ok(0)
+                    } else {
+                        Err(io::Error::new(
+                            io::ErrorKind::Other,
+                            StreamErrorCode(s.write_err),
+                        ))
+                    });
                 }
 
                 if s.writable == 0 {
@@ -827,7 +851,8 @@ impl Future for StreamWriteFuture<'_> {
                 s.writable -= self.share.send[1].buf_len;
 
                 let len = self.header.len() + self.share.send[1].buf_len;
-                packet::data_header_into(&mut self.header, len, s.code, s.id, 0);
+                let note = self.note;
+                packet::data_header_into(&mut self.header, len, s.code, s.id, note);
                 self.share.send[0] = Ciovec::new(&self.header);
                 SEND_LIST
                     .borrow_mut()
@@ -866,7 +891,7 @@ pub struct StreamWriteAllFuture<'a> {
 impl<'a> StreamWriteAllFuture<'a> {
     pub(crate) fn new(s: &'a Option<Stream>, data: &'a [u8]) -> Self {
         Self {
-            inner: StreamWriteFuture::new(s, data),
+            inner: StreamWriteFuture::new(s, data, 0),
             pending: data,
         }
     }
@@ -1304,6 +1329,8 @@ fn process_received() {
                             }
                         } else if flow.increment == 0 {
                             peer_closed_stream(&mut s, STREAM_PEER_FLOW);
+                        } else {
+                            s.write_err = flow.increment;
                         }
 
                         s.flags == 0
