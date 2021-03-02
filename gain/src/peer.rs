@@ -72,8 +72,7 @@ async fn handle_info_packets() {
                     .send((stream, String::from_utf8(type_name.into()).unwrap()));
             }
         })
-        .await
-        .unwrap();
+        .await;
 }
 
 /// Connect to a peer within a group.  Specify the incoming content type.  The

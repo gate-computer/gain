@@ -588,7 +588,7 @@ impl<R> Future for InfoRecvFuture<R>
 where
     R: Fn(&[u8]) + Unpin,
 {
-    type Output = io::Result<()>;
+    type Output = ();
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
         let mut service_states = SERVICE_STATES.borrow_mut();
