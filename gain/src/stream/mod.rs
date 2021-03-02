@@ -24,7 +24,7 @@ pub trait Recv {
     /// drops to zero.
     fn recv<R>(&mut self, capacity: usize, receptor: R) -> future::Recv<R>
     where
-        R: Fn(&[u8]) -> usize + Unpin;
+        R: Fn(&[u8], i32) -> usize + Unpin;
 }
 
 /// Data writer.
@@ -86,7 +86,7 @@ impl Default for RecvWriteStream {
 impl Recv for RecvWriteStream {
     fn recv<R>(&mut self, capacity: usize, receptor: R) -> future::Recv<R>
     where
-        R: Fn(&[u8]) -> usize + Unpin,
+        R: Fn(&[u8], i32) -> usize + Unpin,
     {
         future::Recv::new(&mut self.s, capacity, receptor)
     }
@@ -157,7 +157,7 @@ impl From<RecvWriteStream> for RecvStream {
 impl Recv for RecvStream {
     fn recv<R>(&mut self, capacity: usize, receptor: R) -> future::Recv<R>
     where
-        R: Fn(&[u8]) -> usize + Unpin,
+        R: Fn(&[u8], i32) -> usize + Unpin,
     {
         future::Recv::new(&mut self.s, capacity, receptor)
     }
@@ -199,7 +199,7 @@ impl Default for RecvOnlyStream {
 impl Recv for RecvOnlyStream {
     fn recv<R>(&mut self, capacity: usize, receptor: R) -> future::Recv<R>
     where
-        R: Fn(&[u8]) -> usize + Unpin,
+        R: Fn(&[u8], i32) -> usize + Unpin,
     {
         future::Recv::new(&mut self.s, capacity, receptor)
     }

@@ -5,8 +5,9 @@
 //! Buffered I/O streams.
 
 use std::cell::RefCell;
+use std::error;
+use std::fmt;
 use std::io;
-use std::mem::take;
 use std::rc::Rc;
 use std::task::Waker;
 
@@ -14,33 +15,22 @@ use crate::stream::{
     Close, CloseStream, Recv, RecvOnlyStream, RecvStream, RecvWriteStream, Write, WriteOnlyStream,
 };
 
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct ReadError(i32);
+
+impl error::Error for ReadError {}
+
+impl fmt::Display for ReadError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        self.0.fmt(f)
+    }
+}
+
+#[derive(PartialEq)]
 pub(crate) enum BufResult {
-    None,
-    Ok,
-    Err(io::Error),
-}
-
-impl BufResult {
-    pub(crate) fn is_none(&self) -> bool {
-        match self {
-            Self::None => true,
-            _ => false,
-        }
-    }
-
-    pub(crate) fn consume(&mut self) -> Self {
-        match self {
-            Self::None => Self::None,
-            Self::Ok => Self::Ok,
-            Self::Err(_) => take(self), // self is set to Ok (default).
-        }
-    }
-}
-
-impl Default for BufResult {
-    fn default() -> Self {
-        Self::Ok
-    }
+    Pending,
+    Eof,
+    Err(ReadError),
 }
 
 /// Read buffer.
@@ -135,13 +125,13 @@ pub mod future {
             if !buf.data.is_empty() {
                 Poll::Ready(io::Read::read(&mut *buf, &mut m.dest))
             } else {
-                match buf.result.consume() {
-                    BufResult::None => {
+                match buf.result {
+                    BufResult::Pending => {
                         buf.waker = Some(cx.waker().clone());
                         Poll::Pending
                     }
-                    BufResult::Ok => Poll::Ready(Ok(0)),
-                    BufResult::Err(e) => Poll::Ready(Err(e)),
+                    BufResult::Eof => Poll::Ready(Ok(0)),
+                    BufResult::Err(e) => Poll::Ready(Err(io::Error::new(io::ErrorKind::Other, e))),
                 }
             }
         }
@@ -172,20 +162,20 @@ pub mod future {
             let m = self.get_mut();
             let mut buf = m.shared.borrow_mut();
 
-            if !buf.result.is_none() {
+            if buf.result != BufResult::Pending {
                 min_read = 1;
             }
 
             if buf.len() >= min_read {
                 Poll::Ready(Ok((m.receptor.take().unwrap())(&mut buf)))
             } else {
-                match buf.result.consume() {
-                    BufResult::None => {
+                match buf.result {
+                    BufResult::Pending => {
                         buf.waker = Some(cx.waker().clone());
                         Poll::Pending
                     }
-                    BufResult::Ok => Poll::Ready(Ok(Default::default())),
-                    BufResult::Err(e) => Poll::Ready(Err(e)),
+                    BufResult::Eof => Poll::Ready(Ok(Default::default())),
+                    BufResult::Err(e) => Poll::Ready(Err(io::Error::new(io::ErrorKind::Other, e))),
                 }
             }
         }
@@ -193,8 +183,8 @@ pub mod future {
 }
 
 async fn receive(shared: SharedBuf, mut stream: RecvOnlyStream, capacity: usize) {
-    let r = match stream
-        .recv(capacity, |src: &[u8]| {
+    let note = stream
+        .recv(capacity, |src: &[u8], _: i32| {
             let mut buf = shared.borrow_mut();
             buf.data.extend_from_slice(src);
             if let Some(w) = buf.waker.take() {
@@ -203,13 +193,14 @@ async fn receive(shared: SharedBuf, mut stream: RecvOnlyStream, capacity: usize)
             src.len()
         })
         .await
-    {
-        Ok(()) => BufResult::Ok,
-        Err(e) => BufResult::Err(e),
-    };
+        .unwrap();
 
     let mut buf = shared.borrow_mut();
-    buf.result = r;
+    buf.result = if note == 0 {
+        BufResult::Eof
+    } else {
+        BufResult::Err(ReadError(note))
+    };
     if let Some(w) = buf.waker.take() {
         w.wake();
     }
@@ -238,7 +229,7 @@ impl ReadStream {
     }
 
     fn with_custom_closer(capacity: usize, receiver: RecvOnlyStream, closer: CloseStream) -> Self {
-        let shared: SharedBuf = Rc::new(RefCell::new(Buf::new(BufResult::None)));
+        let shared: SharedBuf = Rc::new(RefCell::new(Buf::new(BufResult::Pending)));
         crate::task::spawn_local(receive(shared.clone(), receiver, capacity));
         Self { shared, closer }
     }
@@ -247,7 +238,7 @@ impl ReadStream {
 impl Default for ReadStream {
     fn default() -> Self {
         Self {
-            shared: Rc::new(RefCell::new(Buf::new(BufResult::default()))),
+            shared: Rc::new(RefCell::new(Buf::new(BufResult::Eof))),
             closer: Default::default(),
         }
     }

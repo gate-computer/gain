@@ -176,6 +176,7 @@ pub struct StreamState {
     flags: StreamFlags,
 
     recv: Recv,
+    recv_err: i32,
     writable: usize,
     writer: Option<Waker>,
     closers: Vec<Waker>,
@@ -194,6 +195,7 @@ impl StreamState {
             flags,
 
             recv: Recv::None,
+            recv_err: 0,
             writable: 0,
             writer: None,
             closers: Vec::new(),
@@ -673,7 +675,7 @@ impl Drop for InfoSendFuture<'_> {
 #[must_use = "futures do nothing unless you `.await` or poll them"]
 pub struct StreamRecvFuture<'a, R>
 where
-    R: Fn(&[u8]) -> usize + Unpin,
+    R: Fn(&[u8], i32) -> usize + Unpin,
 {
     s: &'a Option<Stream>,
     receptor: R,
@@ -685,7 +687,7 @@ where
 
 impl<'a, R> StreamRecvFuture<'a, R>
 where
-    R: Fn(&[u8]) -> usize + Unpin,
+    R: Fn(&[u8], i32) -> usize + Unpin,
 {
     pub(crate) fn new(s: &'a Option<Stream>, cap: usize, receptor: R) -> Self {
         Self {
@@ -722,9 +724,9 @@ where
 
 impl<R> Future for StreamRecvFuture<'_, R>
 where
-    R: Fn(&[u8]) -> usize + Unpin,
+    R: Fn(&[u8], i32) -> usize + Unpin,
 {
-    type Output = io::Result<()>;
+    type Output = Option<i32>;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
         if let Some(s) = self.s {
@@ -739,14 +741,19 @@ where
 
             if let Recv::Some(offset) = take(&mut s.recv) {
                 let mut recv_buf = RECV_BUF.borrow_mut();
-                let data = &recv_buf.consume(offset)[DATA_HEADER_SIZE..];
+                let p = recv_buf.consume(offset);
+                let note = packet::data_note(p);
+                let data = &p[DATA_HEADER_SIZE..];
 
                 if data.len() > self.unreceived as usize {
                     panic!("received data exceeds subscription");
                 }
                 self.unreceived -= data.len() as i32;
 
-                if let Some(n) = self.unsubscribed.checked_add((self.receptor)(&data) as u64) {
+                if let Some(n) = self
+                    .unsubscribed
+                    .checked_add((self.receptor)(&data, note) as u64)
+                {
                     self.unsubscribed = n;
                 } else {
                     panic!("reception capacity out of bounds");
@@ -757,13 +764,19 @@ where
                 }
             }
 
-            if (self.unsubscribed > 0 || self.unreceived > 0) && (s.flags & STREAM_PEER_DATA) != 0 {
-                s.recv = Recv::Wake(cx.waker().clone());
-                return Poll::Pending;
+            if (s.flags & STREAM_PEER_DATA) == 0 {
+                return Poll::Ready(Some(s.recv_err)); // Closed.
             }
+
+            if self.unsubscribed == 0 && self.unreceived == 0 {
+                return Poll::Ready(None); // Kept open.
+            }
+
+            s.recv = Recv::Wake(cx.waker().clone());
+            return Poll::Pending;
         }
 
-        Poll::Ready(Ok(()))
+        Poll::Ready(Some(0)) // Closed; default note.
     }
 }
 
@@ -1326,6 +1339,7 @@ fn process_received() {
                         }
                         future_consumer = true;
                     } else {
+                        s.recv_err = packet::data_note(p);
                         peer_closed_stream(&mut s, STREAM_PEER_DATA);
                     }
 

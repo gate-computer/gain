@@ -99,6 +99,11 @@ pub fn data_id(p: &[u8]) -> StreamId {
     StreamId::from_le_bytes(p[HEADER_SIZE..HEADER_SIZE + 4].try_into().unwrap())
 }
 
+#[inline]
+pub fn data_note(p: &[u8]) -> i32 {
+    StreamId::from_le_bytes(p[HEADER_SIZE + 4..HEADER_SIZE + 8].try_into().unwrap())
+}
+
 pub fn services_header_into(p: &mut [u8], size: usize, count: u16) {
     let content = header_into(p, size, CODE_SERVICES, DOMAIN_CALL);
     content[0..].as_mut().write(&count.to_le_bytes()).unwrap();
