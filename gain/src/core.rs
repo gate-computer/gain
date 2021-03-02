@@ -916,7 +916,7 @@ impl StreamCloseFuture {
 }
 
 impl Future for StreamCloseFuture {
-    type Output = io::Result<()>;
+    type Output = ();
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
         let how = self.how;
@@ -939,7 +939,7 @@ impl Future for StreamCloseFuture {
         }
 
         self.s = None; // For drop implementation.
-        Poll::Ready(Ok(()))
+        Poll::Ready(())
     }
 }
 

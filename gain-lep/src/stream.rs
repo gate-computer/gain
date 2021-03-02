@@ -125,10 +125,8 @@ pub fn send(args: &Obj) -> Res {
 /// The `close` function.
 pub fn close(args: &Obj) -> Res {
     async fn close<T: Close>(stream: &RefCell<T>) -> Res {
-        match stream.borrow_mut().close().await {
-            Ok(_) => Ok(obj::nil()),
-            Err(e) => Err(format!("close: {}", e)),
-        }
+        stream.borrow_mut().close().await;
+        Ok(obj::nil())
     }
 
     if let Some(pair) = args.downcast_ref::<Pair>() {

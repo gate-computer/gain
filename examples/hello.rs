@@ -24,7 +24,7 @@ async fn do_stuff() {
     w.write_all(&catalog::json().await.as_bytes())
         .await
         .unwrap();
-    c.close().await.unwrap();
+    c.close().await;
     println!("Origin connection has been closed");
     if let Ok(n) = w.write("test".as_bytes()).await {
         if n != 0 {

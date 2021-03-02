@@ -60,7 +60,7 @@ fn main() {
             println!("received: {}", str::from_utf8(&buf[..n]).unwrap());
         }
 
-        conn.close().await.unwrap();
+        conn.close().await;
         println!("closed");
     });
 }
