@@ -9,7 +9,6 @@
 use std::convert::TryInto;
 use std::fmt;
 
-use crate::error::ErrorCode;
 use crate::service::Service;
 use crate::stream::RecvWriteStream;
 
@@ -54,10 +53,8 @@ impl AcceptError {
     fn new(code: i16) -> Self {
         Self { code }
     }
-}
 
-impl ErrorCode for AcceptError {
-    fn as_i16(&self) -> i16 {
+    pub fn as_i16(&self) -> i16 {
         self.code
     }
 }

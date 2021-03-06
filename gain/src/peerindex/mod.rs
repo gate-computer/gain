@@ -6,8 +6,6 @@
 
 use std::fmt;
 
-use crate::error::ErrorCode;
-
 pub mod principal;
 
 #[derive(Debug, Eq, PartialEq)]
@@ -32,10 +30,8 @@ impl Error {
             _ => ErrorKind::Other,
         }
     }
-}
 
-impl ErrorCode for Error {
-    fn as_i16(&self) -> i16 {
+    pub fn as_i16(&self) -> i16 {
         self.code
     }
 }

@@ -11,7 +11,6 @@ use std::str;
 
 use futures_channel::oneshot::{channel, Sender};
 
-use crate::error::ErrorCode;
 use crate::service::Service;
 use crate::stream::RecvWriteStream;
 use crate::task::spawn_local;
@@ -170,10 +169,8 @@ impl ConnectError {
             _ => ConnectErrorKind::Other,
         }
     }
-}
 
-impl ErrorCode for ConnectError {
-    fn as_i16(&self) -> i16 {
+    pub fn as_i16(&self) -> i16 {
         self.code
     }
 }
