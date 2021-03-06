@@ -12,6 +12,10 @@ gain-localhost = { path = "../gain-localhost", features = ["lep"] }
 lep = "*"
 
 [[example]]
+name = "catalog"
+path = "catalog.rs"
+
+[[example]]
 name = "hello"
 path = "hello.rs"
 

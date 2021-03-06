@@ -6,7 +6,7 @@
 
 use gain::stream::{Close, Write};
 use gain::task::{block_on, spawn};
-use gain::{catalog, identity, origin};
+use gain::{identity, origin};
 
 async fn do_stuff() {
     println!("Accepting origin connection");
@@ -16,14 +16,10 @@ async fn do_stuff() {
         Some(s) => s,
         None => "world".to_string(),
     };
-    conn.write_all(format!("hello, {}\n", who).as_bytes())
-        .await
-        .unwrap();
+    conn.write_all("hello, ".as_bytes()).await.unwrap();
     let (_, w) = conn.split();
     let (mut w, mut c) = w.split();
-    w.write_all(&catalog::json().await.as_bytes())
-        .await
-        .unwrap();
+    w.write_all(format!("{}\n", who).as_bytes()).await.unwrap();
     c.close().await;
     println!("Origin connection has been closed");
     if let Ok(n) = w.write("test".as_bytes()).await {
