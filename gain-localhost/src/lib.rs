@@ -80,6 +80,14 @@ pub async fn request(
 
     SERVICE
         .call(b.finished_data(), |reply: &[u8]| {
+            if reply.is_empty() {
+                return Response {
+                    status_code: 0,
+                    content_type: None,
+                    content: Vec::new(),
+                };
+            }
+
             let r = get_root::<flat::Response>(reply);
 
             Response {
