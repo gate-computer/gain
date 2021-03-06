@@ -1,6 +1,6 @@
 [package]
 name = "gain-localhost"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Timo Savola <timo.savola@iki.fi>"]
 edition = "2018"
 description = "Client API for gate.computer/localhost service."
@@ -13,8 +13,8 @@ license = "BSD-3-Clause"
 
 [dependencies]
 flatbuffers = "0.6.0"
-gain = { version = ">=0.2.1, <1", path = "../gain" }
-gain-lep = { version = ">=0.1.0, <1", path = "../gain-lep", optional = true }
+gain = { version = ">=0.4.0, <1", path = "../gain" }
+gain-lep = { version = ">=0.1.2, <1", path = "../gain-lep", optional = true }
 lazy_static = "1.4.0"
 
 [features]
