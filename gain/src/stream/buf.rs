@@ -6,6 +6,7 @@
 
 use std::cell::RefCell;
 use std::io;
+use std::num::NonZeroI32;
 use std::rc::Rc;
 use std::task::Waker;
 
@@ -184,10 +185,9 @@ async fn receive(shared: SharedBuf, mut stream: RecvOnlyStream, capacity: usize)
         .unwrap();
 
     let mut buf = shared.borrow_mut();
-    buf.result = if note == 0 {
-        BufResult::Eof
-    } else {
-        BufResult::Err(ErrorCode(note))
+    buf.result = match NonZeroI32::new(note) {
+        None => BufResult::Eof,
+        Some(n) => BufResult::Err(ErrorCode(n)),
     };
     if let Some(w) = buf.waker.take() {
         w.wake();

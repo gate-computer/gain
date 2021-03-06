@@ -11,6 +11,7 @@ use std::io::{self, Error, ErrorKind};
 use std::marker::PhantomData;
 use std::mem::take;
 use std::mem::transmute;
+use std::num::NonZeroI32;
 use std::pin::Pin;
 use std::process::exit;
 use std::ptr::NonNull;
@@ -785,7 +786,7 @@ where
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub struct StreamErrorCode(pub i32);
+pub struct StreamErrorCode(pub NonZeroI32);
 
 impl error::Error for StreamErrorCode {}
 
@@ -830,13 +831,9 @@ impl Future for StreamWriteFuture<'_> {
                 let mut s = s.borrow_mut();
 
                 if (s.flags & STREAM_PEER_FLOW) == 0 {
-                    return Poll::Ready(if s.write_err == 0 {
-                        Ok(0)
-                    } else {
-                        Err(io::Error::new(
-                            io::ErrorKind::Other,
-                            StreamErrorCode(s.write_err),
-                        ))
+                    return Poll::Ready(match NonZeroI32::new(s.write_err) {
+                        None => Ok(0),
+                        Some(n) => Err(io::Error::new(io::ErrorKind::Other, StreamErrorCode(n))),
                     });
                 }
 
