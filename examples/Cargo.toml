@@ -16,6 +16,10 @@ name = "catalog"
 path = "catalog.rs"
 
 [[example]]
+name = "echo"
+path = "echo.rs"
+
+[[example]]
 name = "hello"
 path = "hello.rs"
 
