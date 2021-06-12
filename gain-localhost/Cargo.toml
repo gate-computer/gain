@@ -9,7 +9,7 @@ homepage = "https://gate.computer"
 repository = "https://github.com/gate-computer/gain"
 keywords = ["gate", "http", "service"]
 categories = ["api-bindings", "asynchronous", "network-programming"]
-license = "BSD-3-Clause"
+license = "MIT"
 
 [dependencies]
 flatbuffers = "0.6.0"

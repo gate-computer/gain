@@ -1,5 +1,5 @@
-// Copyright (c) 2018 Timo Savola. All rights reserved.
-// Use of this source code is governed by a BSD-style
+// Copyright (c) 2018 Timo Savola.
+// Use of this source code is governed by the MIT
 // license that can be found in the LICENSE file.
 
 #![cfg_attr(target_os = "unknown", no_main)]
