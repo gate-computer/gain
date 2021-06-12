@@ -1,4 +1,5 @@
 CARGO		:= cargo
+FLATC		:= flatc
 GATE		:= gate
 
 TARGET		:= wasm32-wasi
@@ -7,13 +8,10 @@ FUNCTION	:=
 
 -include config.mk
 
-.PHONY: debug
-debug:
-	$(CARGO) build --target=$(TARGET) --examples
-
-.PHONY: release
-release:
-	$(CARGO) build --target=$(TARGET) --examples --release
+.PHONY: debug release
+debug release:
+	$(CARGO) build --target=$(TARGET) $(patsubst --debug,,--$@)
+	$(CARGO) build --target=$(TARGET) --examples $(patsubst --debug,,--$@)
 
 .PHONY: all
 all: debug release
@@ -28,6 +26,10 @@ check-%: %
 		$(GATE) call -d target/$(TARGET)/$*/examples/peer.wasm & \
 		wait
 
+.PHONY: generate
+generate:
+	$(FLATC) --rust -o gain-localhost/src ../gate-localhost/localhost.fbs
+
 .PHONY: clean
 clean:
-	rm -rf target Cargo.lock
+	rm -rf Cargo.lock target

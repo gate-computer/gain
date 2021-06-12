@@ -7,14 +7,13 @@
 #[macro_use]
 extern crate lazy_static;
 
-use flatbuffers::{get_root, FlatBufferBuilder};
+use flatbuffers::{root, FlatBufferBuilder};
 use gain::service::Service;
 
 // The schema file can be found at https://gate.computer/localhost
-#[allow(unused_imports)]
+#[allow(unused, unused_imports)]
 #[path = "localhost_generated.rs"]
-mod generated;
-use self::generated::localhost::flat;
+mod flat;
 
 lazy_static! {
     static ref SERVICE: Service = Service::register("gate.computer/localhost");
@@ -88,7 +87,7 @@ pub async fn request(
                 };
             }
 
-            let r = get_root::<flat::Response>(reply);
+            let r = root::<flat::Response>(reply).unwrap();
 
             Response {
                 status_code: r.status_code(),

@@ -6,57 +6,59 @@ use std::mem;
 use std::cmp::Ordering;
 
 extern crate flatbuffers;
-use self::flatbuffers::EndianScalar;
+use self::flatbuffers::{EndianScalar, Follow};
 
-#[allow(unused_imports, dead_code)]
-pub mod localhost {
-
-  use std::mem;
-  use std::cmp::Ordering;
-
-  extern crate flatbuffers;
-  use self::flatbuffers::EndianScalar;
-#[allow(unused_imports, dead_code)]
-pub mod flat {
-
-  use std::mem;
-  use std::cmp::Ordering;
-
-  extern crate flatbuffers;
-  use self::flatbuffers::EndianScalar;
-
+#[deprecated(since = "2.0.0", note = "Use associated constants instead. This will no longer be generated in 2021.")]
+pub const ENUM_MIN_FUNCTION: u8 = 0;
+#[deprecated(since = "2.0.0", note = "Use associated constants instead. This will no longer be generated in 2021.")]
+pub const ENUM_MAX_FUNCTION: u8 = 1;
+#[deprecated(since = "2.0.0", note = "Use associated constants instead. This will no longer be generated in 2021.")]
 #[allow(non_camel_case_types)]
-#[repr(u8)]
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
-pub enum Function {
-  NONE = 0,
-  Request = 1,
+pub const ENUM_VALUES_FUNCTION: [Function; 2] = [
+  Function::NONE,
+  Function::Request,
+];
 
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+#[repr(transparent)]
+pub struct Function(pub u8);
+#[allow(non_upper_case_globals)]
+impl Function {
+  pub const NONE: Self = Self(0);
+  pub const Request: Self = Self(1);
+
+  pub const ENUM_MIN: u8 = 0;
+  pub const ENUM_MAX: u8 = 1;
+  pub const ENUM_VALUES: &'static [Self] = &[
+    Self::NONE,
+    Self::Request,
+  ];
+  /// Returns the variant's name or "" if unknown.
+  pub fn variant_name(self) -> Option<&'static str> {
+    match self {
+      Self::NONE => Some("NONE"),
+      Self::Request => Some("Request"),
+      _ => None,
+    }
+  }
 }
-
-const ENUM_MIN_FUNCTION: u8 = 0;
-const ENUM_MAX_FUNCTION: u8 = 1;
-
+impl std::fmt::Debug for Function {
+  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    if let Some(name) = self.variant_name() {
+      f.write_str(name)
+    } else {
+      f.write_fmt(format_args!("<UNKNOWN {:?}>", self.0))
+    }
+  }
+}
 impl<'a> flatbuffers::Follow<'a> for Function {
   type Inner = Self;
   #[inline]
   fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
-    flatbuffers::read_scalar_at::<Self>(buf, loc)
-  }
-}
-
-impl flatbuffers::EndianScalar for Function {
-  #[inline]
-  fn to_little_endian(self) -> Self {
-    let n = u8::to_le(self as u8);
-    let p = &n as *const u8 as *const Function;
-    unsafe { *p }
-  }
-  #[inline]
-  fn from_little_endian(self) -> Self {
-    let n = u8::from_le(self as u8);
-    let p = &n as *const u8 as *const Function;
-    unsafe { *p }
+    let b = unsafe {
+      flatbuffers::read_scalar_at::<u8>(buf, loc)
+    };
+    Self(b)
   }
 }
 
@@ -64,30 +66,39 @@ impl flatbuffers::Push for Function {
     type Output = Function;
     #[inline]
     fn push(&self, dst: &mut [u8], _rest: &[u8]) {
-        flatbuffers::emplace_scalar::<Function>(dst, *self);
+        unsafe { flatbuffers::emplace_scalar::<u8>(dst, self.0); }
     }
 }
 
-#[allow(non_camel_case_types)]
-const ENUM_VALUES_FUNCTION:[Function; 2] = [
-  Function::NONE,
-  Function::Request
-];
-
-#[allow(non_camel_case_types)]
-const ENUM_NAMES_FUNCTION:[&'static str; 2] = [
-    "NONE",
-    "Request"
-];
-
-pub fn enum_name_function(e: Function) -> &'static str {
-  let index = e as u8;
-  ENUM_NAMES_FUNCTION[index as usize]
+impl flatbuffers::EndianScalar for Function {
+  #[inline]
+  fn to_little_endian(self) -> Self {
+    let b = u8::to_le(self.0);
+    Self(b)
+  }
+  #[inline]
+  #[allow(clippy::wrong_self_convention)]
+  fn from_little_endian(self) -> Self {
+    let b = u8::from_le(self.0);
+    Self(b)
+  }
 }
 
+impl<'a> flatbuffers::Verifiable for Function {
+  #[inline]
+  fn run_verifier(
+    v: &mut flatbuffers::Verifier, pos: usize
+  ) -> Result<(), flatbuffers::InvalidFlatbuffer> {
+    use self::flatbuffers::Verifiable;
+    u8::run_verifier(v, pos)
+  }
+}
+
+impl flatbuffers::SimpleToVerifyInSlice for Function {}
 pub struct FunctionUnionTableOffset {}
+
 pub enum RequestOffset {}
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, PartialEq)]
 
 pub struct Request<'a> {
   pub _tab: flatbuffers::Table<'a>,
@@ -97,18 +108,14 @@ impl<'a> flatbuffers::Follow<'a> for Request<'a> {
     type Inner = Request<'a>;
     #[inline]
     fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
-        Self {
-            _tab: flatbuffers::Table { buf: buf, loc: loc },
-        }
+        Self { _tab: flatbuffers::Table { buf, loc } }
     }
 }
 
 impl<'a> Request<'a> {
     #[inline]
     pub fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
-        Request {
-            _tab: table,
-        }
+        Request { _tab: table }
     }
     #[allow(unused_mut)]
     pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr>(
@@ -145,11 +152,26 @@ impl<'a> Request<'a> {
   }
 }
 
+impl flatbuffers::Verifiable for Request<'_> {
+  #[inline]
+  fn run_verifier(
+    v: &mut flatbuffers::Verifier, pos: usize
+  ) -> Result<(), flatbuffers::InvalidFlatbuffer> {
+    use self::flatbuffers::Verifiable;
+    v.visit_table(pos)?
+     .visit_field::<flatbuffers::ForwardsUOffset<&str>>(&"method", Self::VT_METHOD, false)?
+     .visit_field::<flatbuffers::ForwardsUOffset<&str>>(&"uri", Self::VT_URI, false)?
+     .visit_field::<flatbuffers::ForwardsUOffset<&str>>(&"content_type", Self::VT_CONTENT_TYPE, false)?
+     .visit_field::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'_, u8>>>(&"body", Self::VT_BODY, false)?
+     .finish();
+    Ok(())
+  }
+}
 pub struct RequestArgs<'a> {
-    pub method: Option<flatbuffers::WIPOffset<&'a  str>>,
-    pub uri: Option<flatbuffers::WIPOffset<&'a  str>>,
-    pub content_type: Option<flatbuffers::WIPOffset<&'a  str>>,
-    pub body: Option<flatbuffers::WIPOffset<flatbuffers::Vector<'a ,  u8>>>,
+    pub method: Option<flatbuffers::WIPOffset<&'a str>>,
+    pub uri: Option<flatbuffers::WIPOffset<&'a str>>,
+    pub content_type: Option<flatbuffers::WIPOffset<&'a str>>,
+    pub body: Option<flatbuffers::WIPOffset<flatbuffers::Vector<'a, u8>>>,
 }
 impl<'a> Default for RequestArgs<'a> {
     #[inline]
@@ -198,8 +220,18 @@ impl<'a: 'b, 'b> RequestBuilder<'a, 'b> {
   }
 }
 
+impl std::fmt::Debug for Request<'_> {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    let mut ds = f.debug_struct("Request");
+      ds.field("method", &self.method());
+      ds.field("uri", &self.uri());
+      ds.field("content_type", &self.content_type());
+      ds.field("body", &self.body());
+      ds.finish()
+  }
+}
 pub enum ResponseOffset {}
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, PartialEq)]
 
 pub struct Response<'a> {
   pub _tab: flatbuffers::Table<'a>,
@@ -209,18 +241,14 @@ impl<'a> flatbuffers::Follow<'a> for Response<'a> {
     type Inner = Response<'a>;
     #[inline]
     fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
-        Self {
-            _tab: flatbuffers::Table { buf: buf, loc: loc },
-        }
+        Self { _tab: flatbuffers::Table { buf, loc } }
     }
 }
 
 impl<'a> Response<'a> {
     #[inline]
     pub fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
-        Response {
-            _tab: table,
-        }
+        Response { _tab: table }
     }
     #[allow(unused_mut)]
     pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr>(
@@ -251,10 +279,24 @@ impl<'a> Response<'a> {
   }
 }
 
+impl flatbuffers::Verifiable for Response<'_> {
+  #[inline]
+  fn run_verifier(
+    v: &mut flatbuffers::Verifier, pos: usize
+  ) -> Result<(), flatbuffers::InvalidFlatbuffer> {
+    use self::flatbuffers::Verifiable;
+    v.visit_table(pos)?
+     .visit_field::<u16>(&"status_code", Self::VT_STATUS_CODE, false)?
+     .visit_field::<flatbuffers::ForwardsUOffset<&str>>(&"content_type", Self::VT_CONTENT_TYPE, false)?
+     .visit_field::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'_, u8>>>(&"body", Self::VT_BODY, false)?
+     .finish();
+    Ok(())
+  }
+}
 pub struct ResponseArgs<'a> {
     pub status_code: u16,
-    pub content_type: Option<flatbuffers::WIPOffset<&'a  str>>,
-    pub body: Option<flatbuffers::WIPOffset<flatbuffers::Vector<'a ,  u8>>>,
+    pub content_type: Option<flatbuffers::WIPOffset<&'a str>>,
+    pub body: Option<flatbuffers::WIPOffset<flatbuffers::Vector<'a, u8>>>,
 }
 impl<'a> Default for ResponseArgs<'a> {
     #[inline]
@@ -298,8 +340,17 @@ impl<'a: 'b, 'b> ResponseBuilder<'a, 'b> {
   }
 }
 
+impl std::fmt::Debug for Response<'_> {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    let mut ds = f.debug_struct("Response");
+      ds.field("status_code", &self.status_code());
+      ds.field("content_type", &self.content_type());
+      ds.field("body", &self.body());
+      ds.finish()
+  }
+}
 pub enum CallOffset {}
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, PartialEq)]
 
 pub struct Call<'a> {
   pub _tab: flatbuffers::Table<'a>,
@@ -309,18 +360,14 @@ impl<'a> flatbuffers::Follow<'a> for Call<'a> {
     type Inner = Call<'a>;
     #[inline]
     fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
-        Self {
-            _tab: flatbuffers::Table { buf: buf, loc: loc },
-        }
+        Self { _tab: flatbuffers::Table { buf, loc } }
     }
 }
 
 impl<'a> Call<'a> {
     #[inline]
     pub fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
-        Call {
-            _tab: table,
-        }
+        Call { _tab: table }
     }
     #[allow(unused_mut)]
     pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr>(
@@ -347,7 +394,7 @@ impl<'a> Call<'a> {
   #[allow(non_snake_case)]
   pub fn function_as_request(&self) -> Option<Request<'a>> {
     if self.function_type() == Function::Request {
-      self.function().map(|u| Request::init_from_table(u))
+      self.function().map(Request::init_from_table)
     } else {
       None
     }
@@ -355,6 +402,23 @@ impl<'a> Call<'a> {
 
 }
 
+impl flatbuffers::Verifiable for Call<'_> {
+  #[inline]
+  fn run_verifier(
+    v: &mut flatbuffers::Verifier, pos: usize
+  ) -> Result<(), flatbuffers::InvalidFlatbuffer> {
+    use self::flatbuffers::Verifiable;
+    v.visit_table(pos)?
+     .visit_union::<Function, _>(&"function_type", Self::VT_FUNCTION_TYPE, &"function", Self::VT_FUNCTION, false, |key, v, pos| {
+        match key {
+          Function::Request => v.verify_union_variant::<flatbuffers::ForwardsUOffset<Request>>("Function::Request", pos),
+          _ => Ok(()),
+        }
+     })?
+     .finish();
+    Ok(())
+  }
+}
 pub struct CallArgs {
     pub function_type: Function,
     pub function: Option<flatbuffers::WIPOffset<flatbuffers::UnionWIPOffset>>,
@@ -396,6 +460,23 @@ impl<'a: 'b, 'b> CallBuilder<'a, 'b> {
   }
 }
 
-}  // pub mod flat
-}  // pub mod localhost
-
+impl std::fmt::Debug for Call<'_> {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    let mut ds = f.debug_struct("Call");
+      ds.field("function_type", &self.function_type());
+      match self.function_type() {
+        Function::Request => {
+          if let Some(x) = self.function_as_request() {
+            ds.field("function", &x)
+          } else {
+            ds.field("function", &"InvalidFlatbuffer: Union discriminant does not match value.")
+          }
+        },
+        _ => {
+          let x: Option<()> = None;
+          ds.field("function", &x)
+        },
+      };
+      ds.finish()
+  }
+}
