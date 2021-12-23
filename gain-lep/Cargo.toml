@@ -2,7 +2,7 @@
 name = "gain-lep"
 version = "0.1.3"
 authors = ["Timo Savola <timo.savola@iki.fi>"]
-edition = "2018"
+edition = "2021"
 description = "Support for exposing Gain APIs via Lep."
 documentation = "https://docs.rs/gain-lep"
 homepage = "https://gate.computer"
