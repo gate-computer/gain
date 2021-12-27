@@ -19,7 +19,7 @@ use std::rc::Rc;
 use std::slice;
 use std::task::{Context, Poll, Waker};
 
-use crate::gate::{self, Ciovec, Iovec, IO_WAIT, MAX_RECV_SIZE};
+use crate::gate::{self, Ciovec, Iovec, MAX_RECV_SIZE};
 use crate::packet::{
     self, Code, StreamId, ALIGNMENT, CODE_SERVICES, DATA_HEADER_SIZE, DOMAIN_CALL, DOMAIN_DATA,
     DOMAIN_FLOW, DOMAIN_INFO, FLOW_SIZE, HEADER_SIZE, SERVICES_HEADER_SIZE, SERVICE_STATE_AVAIL,
@@ -1138,13 +1138,8 @@ fn perform_io() {
         }
     }
 
-    let (recv_len, send_len) = unsafe {
-        gate::io(
-            &recv_vec[..recv_vec_len],
-            &send_vec[..send_vec_len],
-            IO_WAIT,
-        )
-    };
+    let (recv_len, send_len) =
+        unsafe { gate::io(&recv_vec[..recv_vec_len], &send_vec[..send_vec_len], None) };
 
     if send_len > 0 {
         let share = send_list.front.as_mut().unwrap();

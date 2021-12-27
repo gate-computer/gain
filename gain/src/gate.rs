@@ -3,10 +3,9 @@
 // license that can be found in the LICENSE file.
 
 use std::ptr::{null, null_mut};
+use std::time::Duration;
 
 pub const MAX_RECV_SIZE: usize = 65536;
-
-pub const IO_WAIT: u32 = 0x1;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -53,7 +52,7 @@ impl Default for Iovec {
     }
 }
 
-pub unsafe fn io(recv: &[Iovec], send: &[Ciovec], flags: u32) -> (usize, usize) {
+pub unsafe fn io(recv: &[Iovec], send: &[Ciovec], timeout: Option<Duration>) -> (usize, usize) {
     let mut received: usize = 0;
     let mut sent: usize = 0;
 
@@ -64,7 +63,17 @@ pub unsafe fn io(recv: &[Iovec], send: &[Ciovec], flags: u32) -> (usize, usize) 
         send.as_ptr(),
         send.len(),
         &mut sent,
-        flags,
+        match timeout {
+            Some(t) => {
+                let n = t.as_nanos();
+                if n <= 0x7fffffffffffffff {
+                    n as i64
+                } else {
+                    0x7fffffffffffffff
+                }
+            }
+            None => -1,
+        },
     );
 
     (received, sent)
@@ -79,6 +88,6 @@ extern "C" {
         send_vec: *const Ciovec,
         send_vec_len: usize,
         sent_bytes: *mut usize,
-        flags: u32,
+        timeout: i64,
     );
 }
