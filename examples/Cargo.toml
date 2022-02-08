@@ -34,3 +34,7 @@ path = "localhost.rs"
 [[example]]
 name = "peer"
 path = "peer.rs"
+
+[[example]]
+name = "random"
+path = "random.rs"

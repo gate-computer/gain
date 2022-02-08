@@ -32,8 +32,8 @@
 //! ## Service APIs
 //!
 //! The [`catalog`](catalog), [`identity`](identity), [`origin`](origin),
-//! [`peer`](peer) and [`peerindex`](peerindex) modules provide access to the
-//! built-in Gate services.
+//! [`peer`](peer), [`peerindex`](peerindex) and [`random`](random) modules
+//! provide access to the built-in Gate services.
 //!
 //! Common I/O stream types are defined in the [`stream`](stream) module.
 //!
@@ -53,6 +53,7 @@ pub mod origin;
 mod packet;
 pub mod peer;
 pub mod peerindex;
+pub mod random;
 pub mod service;
 pub mod stream;
 pub mod task;
