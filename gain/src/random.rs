@@ -4,22 +4,27 @@
 
 //! Generate random values.
 
+use futures_util::lock::Mutex;
+
 use crate::service::Service;
 
 lazy_static! {
-    static ref SERVICE: Service = Service::register("random");
+    static ref SERVICE: Mutex::<Service> = Mutex::new(Service::register("random"));
 }
 
 pub async fn random<T>() -> T
 where
     T: AsMut<[u8]> + Default,
 {
+    let service = SERVICE.lock().await;
+
     let mut buf: T = Default::default();
     let mut offset = 0;
 
     while offset < buf.as_mut().len() {
-        offset += SERVICE
-            .call(&[], |src: &[u8]| {
+        let need = buf.as_mut().len() - offset;
+        offset += service
+            .call(&[need.min(255) as u8], |src: &[u8]| {
                 let dest = &mut buf.as_mut()[offset..];
                 let n = dest.len().min(src.len());
                 dest[..n].copy_from_slice(&src[..n]);

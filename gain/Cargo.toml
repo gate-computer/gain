@@ -14,4 +14,5 @@ license = "MIT"
 [dependencies]
 async-task = "1.3.0"
 futures-channel = "0.3.0"
+futures-util = "0.3.0"
 lazy_static = "1.4.0"
