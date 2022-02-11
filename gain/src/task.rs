@@ -45,8 +45,14 @@ where
             return result;
         }
 
-        while let Some(task) = TASKS.borrow_mut().pop_front() {
-            task.run();
+        loop {
+            // Can't access TASKS in the same for/if with run().
+            let task = TASKS.borrow_mut().pop_front();
+            if let Some(task) = task {
+                task.run();
+            } else {
+                break;
+            }
         }
 
         if !rerun.replace(false) {
