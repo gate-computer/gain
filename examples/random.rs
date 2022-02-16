@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use gain::random::random;
-use gain::task::{block_on, spawn_local};
+use gain::task::{block_on, spawn_local, yield_now};
 
 fn main() {
     block_on(async {
@@ -16,12 +16,14 @@ fn main() {
 
 async fn f1() {
     for _ in 0..40 {
-        println!("{}", i32::from_le_bytes(random().await));
+        println!("{}", i16::from_le_bytes(random().await));
+        yield_now().await;
     }
 }
 
 async fn f2() {
     for _ in 0..10 {
         println!("{}", i128::from_le_bytes(random().await));
+        yield_now().await;
     }
 }

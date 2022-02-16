@@ -13,6 +13,7 @@ use std::task::{Context, Poll};
 use async_task::Task;
 
 use crate::core;
+use crate::core::YieldFuture;
 use crate::threadunsafe::{ThreadUnsafeCell, ThreadUnsafeFuture, ThreadUnsafeRefCell};
 
 lazy_static! {
@@ -84,4 +85,9 @@ where
     T: Send + 'static,
 {
     spawn(ThreadUnsafeFuture(future))
+}
+
+/// Yield execution back to the runtime.
+pub async fn yield_now() {
+    YieldFuture::new().await;
 }

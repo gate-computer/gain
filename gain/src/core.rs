@@ -18,6 +18,7 @@ use std::ptr::NonNull;
 use std::rc::Rc;
 use std::slice;
 use std::task::{Context, Poll, Waker};
+use std::time::Duration;
 
 use crate::gate::{self, Ciovec, Iovec, MAX_RECV_SIZE};
 use crate::packet::{
@@ -362,6 +363,14 @@ impl SendLink {
         self.addr == 0
     }
 
+    fn is_nop(&mut self) -> bool {
+        if let Some(share) = self.as_mut() {
+            share.is_nop()
+        } else {
+            false
+        }
+    }
+
     fn take(&mut self) -> Self {
         let link = self.clone();
         self.addr = 0;
@@ -430,12 +439,20 @@ impl Share {
         packet::code(self.header())
     }
 
-    fn is_sent(&self) -> bool {
+    fn unaligned_send_len(&self) -> usize {
         let mut len = 0;
         for span in self.send.iter() {
             len += span.buf_len;
         }
-        self.sent == packet::align(len)
+        len
+    }
+
+    fn is_sent(&self) -> bool {
+        self.sent == packet::align(self.unaligned_send_len())
+    }
+
+    fn is_nop(&self) -> bool {
+        !self.reply.is_expected() && self.unaligned_send_len() == 0
     }
 }
 
@@ -975,6 +992,40 @@ impl Drop for StreamCloseFuture {
     }
 }
 
+#[must_use = "futures do nothing unless you `.await` or poll them"]
+pub(crate) struct YieldFuture {
+    share: Share,
+    started: bool,
+}
+
+impl YieldFuture {
+    pub(crate) fn new() -> Self {
+        Self {
+            share: Share::default(),
+            started: false,
+        }
+    }
+}
+
+impl Future for YieldFuture {
+    type Output = ();
+
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
+        if !self.started {
+            SEND_LIST
+                .borrow_mut()
+                .push_back(SendLink::new(&mut self.share));
+
+            self.started = true;
+        } else if self.share.is_sent() {
+            return Poll::Ready(());
+        }
+
+        self.share.waker = Some(cx.waker().clone());
+        Poll::Pending
+    }
+}
+
 pub fn register_service(name: &'static str) -> Result<Code, RegistrationError> {
     let namedata = name.as_bytes();
     if namedata.is_empty() || namedata.len() > 127 {
@@ -1107,6 +1158,19 @@ fn perform_io() {
         }
     }
 
+    let mut wait = true;
+
+    // Handle yields.
+    while send_list.front.is_nop() {
+        let mut link = send_list.pop_front().unwrap();
+        let share = link.as_mut().unwrap();
+        if let Some(w) = share.waker.take() {
+            w.wake();
+        }
+
+        wait = false;
+    }
+
     let mut send_vec: [Ciovec; 3] = [Ciovec::default(); 3];
     let mut send_vec_len = 0;
 
@@ -1138,8 +1202,15 @@ fn perform_io() {
         }
     }
 
-    let (recv_len, send_len) =
-        unsafe { gate::io(&recv_vec[..recv_vec_len], &send_vec[..send_vec_len], None) };
+    let timeout = if wait { None } else { Some(Duration::ZERO) };
+
+    let (recv_len, send_len) = unsafe {
+        gate::io(
+            &recv_vec[..recv_vec_len],
+            &send_vec[..send_vec_len],
+            timeout,
+        )
+    };
 
     if send_len > 0 {
         let share = send_list.front.as_mut().unwrap();
