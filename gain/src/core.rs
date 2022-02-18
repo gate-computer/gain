@@ -1064,7 +1064,7 @@ pub fn init_stream(code: Code, id: StreamId, flags: StreamFlags) -> Option<Strea
 
     let s = Rc::new(RefCell::new(StreamState::new(code, id, flags)));
 
-    if let Some(_) = STREAMS.borrow_mut().insert((code, id), s.clone()) {
+    if STREAMS.borrow_mut().insert((code, id), s.clone()).is_some() {
         panic!("stream already exists");
     }
 

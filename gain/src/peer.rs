@@ -29,7 +29,7 @@ pub async fn register_group(group_name: &str, listener: Box<dyn Fn(&str, &str)>)
     let mut groups = GROUPS.borrow_mut();
     let init = groups.is_empty();
 
-    if let Some(_) = groups.insert(group_name.into(), listener) {
+    if groups.insert(group_name.into(), listener).is_some() {
         panic!("peer group {} already registered", group_name);
     }
 
