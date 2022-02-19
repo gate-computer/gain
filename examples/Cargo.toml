@@ -9,6 +9,7 @@ futures = "0.3.0"
 gain = { path = "../gain" }
 gain-lep = { path = "../gain-lep" }
 gain-localhost = { path = "../gain-localhost", features = ["lep"] }
+gain-shell = { path = "../gain-shell" }
 lep = "*"
 
 [[example]]
@@ -38,3 +39,7 @@ path = "peer.rs"
 [[example]]
 name = "random"
 path = "random.rs"
+
+[[example]]
+name = "shell"
+path = "shell.rs"
