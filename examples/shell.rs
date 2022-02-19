@@ -12,7 +12,7 @@ use gain_shell::spawn;
 
 fn main() {
     exit(block_on(async {
-        let mut output = spawn().await.unwrap();
+        let mut output = spawn("echo -n hello,  && echo \\ world").await.unwrap();
 
         let result: Cell<Option<i32>> = Cell::new(None);
 
