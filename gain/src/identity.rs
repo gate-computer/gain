@@ -10,8 +10,8 @@ lazy_static! {
     static ref SERVICE: Service = Service::register("identity");
 }
 
-const CALL_PRINCIPAL_ID: u8 = 1;
-const CALL_INSTANCE_ID: u8 = 2;
+const CALL_PRINCIPAL_ID: u8 = 0;
+const CALL_INSTANCE_ID: u8 = 1;
 
 /// Get an id of this program's owner, if any.
 pub async fn principal_id() -> Option<String> {
