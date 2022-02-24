@@ -54,6 +54,7 @@ mod packet;
 pub mod peer;
 pub mod peerindex;
 pub mod random;
+pub mod scope;
 pub mod service;
 pub mod stream;
 pub mod task;
