@@ -37,6 +37,7 @@ pub async fn spawn(command: &str) -> Result<RecvStream, Error> {
 #[derive(Debug, Eq, PartialEq)]
 pub enum ErrorKind {
     Other,
+    Scope,
     Quota,
     User,
     WorkDir,
@@ -55,10 +56,11 @@ impl Error {
 
     pub fn kind(&self) -> ErrorKind {
         match self.code {
-            1 => ErrorKind::Quota,
-            2 => ErrorKind::User,
-            3 => ErrorKind::WorkDir,
-            4 => ErrorKind::Executable,
+            1 => ErrorKind::Scope,
+            2 => ErrorKind::Quota,
+            3 => ErrorKind::User,
+            4 => ErrorKind::WorkDir,
+            5 => ErrorKind::Executable,
             _ => ErrorKind::Other,
         }
     }
@@ -71,6 +73,7 @@ impl Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         match self.kind() {
+            ErrorKind::Scope => f.write_str("restricted scope"),
             ErrorKind::Quota => f.write_str("not enough quota"),
             ErrorKind::User => f.write_str("user not found"),
             ErrorKind::WorkDir => f.write_str("work directory error"),
