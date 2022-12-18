@@ -7,6 +7,8 @@ use std::time::Duration;
 
 pub const MAX_RECV_SIZE: usize = 65536;
 
+pub const FLAG_STARTED_OR_RESUMED: u64 = 1 << 0;
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct Ciovec {
@@ -52,9 +54,14 @@ impl Default for Iovec {
     }
 }
 
-pub unsafe fn io(recv: &[Iovec], send: &[Ciovec], timeout: Option<Duration>) -> (usize, usize) {
+pub unsafe fn io(
+    recv: &[Iovec],
+    send: &[Ciovec],
+    timeout: Option<Duration>,
+) -> (usize, usize, u64) {
     let mut received: usize = 0;
     let mut sent: usize = 0;
+    let mut flags: u64 = 0;
 
     io_65536(
         recv.as_ptr(),
@@ -74,9 +81,10 @@ pub unsafe fn io(recv: &[Iovec], send: &[Ciovec], timeout: Option<Duration>) -> 
             }
             None => -1,
         },
+        &mut flags,
     );
 
-    (received, sent)
+    (received, sent, flags)
 }
 
 #[link(wasm_import_module = "gate")]
@@ -89,5 +97,6 @@ extern "C" {
         send_vec_len: usize,
         sent_bytes: *mut usize,
         timeout: i64,
+        flags: *mut u64,
     );
 }

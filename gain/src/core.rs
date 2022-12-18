@@ -1093,23 +1093,28 @@ fn peer_closed_stream(s: &mut StreamState, how: StreamFlags) {
 }
 
 pub fn io() {
-    perform_io();
+    let flags = perform_io();
+
+    if flags & gate::FLAG_STARTED_OR_RESUMED != 0 {
+        // TODO
+    }
+
     process_received();
 }
 
-fn perform_io() {
+fn perform_io() -> u64 {
     let mut send_list = SEND_LIST.borrow_mut();
     let mut recv_buf = RECV_BUF.borrow_mut();
 
     // Don't perform I/O yet if there are unhandled received packets.
     if !recv_buf.tail.is_empty() {
-        return;
+        return 0;
     } else {
         let head = recv_buf.head_slice();
         if head.len() >= HEADER_SIZE {
             let packet_end = recv_buf.head.off + packet::align(packet::size(head));
             if packet_end <= recv_buf.head.end {
-                return;
+                return 0;
             }
         }
     }
@@ -1195,7 +1200,7 @@ fn perform_io() {
 
     let timeout = if wait { None } else { Some(Duration::ZERO) };
 
-    let (recv_len, send_len) = unsafe {
+    let (recv_len, send_len, flags) = unsafe {
         gate::io(
             &recv_vec[..recv_vec_len],
             &send_vec[..send_vec_len],
@@ -1255,6 +1260,8 @@ fn perform_io() {
             }
         }
     }
+
+    flags
 }
 
 fn process_received() {
