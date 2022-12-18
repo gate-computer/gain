@@ -4,7 +4,11 @@ GATE		:= gate
 
 TARGET		:= wasm32-wasi
 
-FUNCTION	:=
+ifeq ($(TARGET),wasm32-unknown-unknown)
+HELLO_FUNCTION	:= greet
+else
+HELLO_FUNCTION	:=
+endif
 
 -include config.mk
 
@@ -19,7 +23,7 @@ all: debug release
 .PHONY: check
 check: check-debug check-release
 check-%: %
-	$(GATE) call -d target/$(TARGET)/$*/examples/hello.wasm $(FUNCTION)
+	$(GATE) call -d target/$(TARGET)/$*/examples/hello.wasm $(HELLO_FUNCTION)
 	$(GATE) call -d target/$(TARGET)/$*/examples/catalog.wasm
 	$(GATE) call -d target/$(TARGET)/$*/examples/random.wasm
 	/bin/echo -e "+ 1 2\n+ 2 3\ncatalog\nidentity/principal\nidentity/instance" | $(GATE) call -d target/$(TARGET)/$*/examples/lep.wasm
@@ -33,4 +37,5 @@ generate:
 
 .PHONY: clean
 clean:
-	rm -rf Cargo.lock target
+	$(CARGO) clean
+	rm -f Cargo.lock
