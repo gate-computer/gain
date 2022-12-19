@@ -11,11 +11,6 @@ use gain_lep::{Domain, Obj, Pair, Res};
 
 /// Register all localhost functions.
 pub fn register(d: &mut Domain) {
-    register_get(d);
-}
-
-/// Register the `localhost/get` function.
-pub fn register_get(d: &mut Domain) {
     d.register("localhost/get", get);
 }
 
