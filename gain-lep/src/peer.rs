@@ -15,11 +15,6 @@ use crate::future::future_obj;
 
 /// Register all peer functions.
 pub fn register(d: &mut Domain) {
-    register_connect(d);
-}
-
-/// Register the `peer/connect` function.
-pub fn register_connect(d: &mut Domain) {
     d.register("peer/connect", connect);
 }
 

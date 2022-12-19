@@ -15,11 +15,6 @@ use crate::future::future_obj;
 
 /// Register all origin functions.
 pub fn register(d: &mut Domain) {
-    register_accept(d);
-}
-
-/// Register the `origin/accept` function.
-pub fn register_accept(d: &mut Domain) {
     d.register("origin/accept", accept);
 }
 

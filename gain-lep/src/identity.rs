@@ -13,17 +13,7 @@ use crate::future::future_obj;
 
 /// Register all identity service functions.
 pub fn register(d: &mut Domain) {
-    register_principal(d);
-    register_instance(d);
-}
-
-/// Register the `identity/principal` function.
-pub fn register_principal(d: &mut Domain) {
     d.register("identity/principal", principal);
-}
-
-/// Register the `identity/instance` function.
-pub fn register_instance(d: &mut Domain) {
     d.register("identity/instance", instance);
 }
 

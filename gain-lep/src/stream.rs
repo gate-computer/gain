@@ -24,23 +24,8 @@ pub type WriteStreamRef = RefCell<WriteStream>;
 
 /// Register all stream function.
 pub fn register(d: &mut Domain) {
-    register_receive(d);
-    register_send(d);
-    register_close(d);
-}
-
-/// Register the `<-` function.
-pub fn register_receive(d: &mut Domain) {
     d.register("<-", receive);
-}
-
-/// Register the `->` function.
-pub fn register_send(d: &mut Domain) {
     d.register("->", send);
-}
-
-/// Register the `close` function.
-pub fn register_close(d: &mut Domain) {
     d.register("close", close);
 }
 
