@@ -13,7 +13,8 @@ lazy_static! {
 const CALL_PRINCIPAL_ID: u8 = 0;
 const CALL_INSTANCE_ID: u8 = 1;
 
-/// Get an id of this program's owner, if any.
+/// Get an id of this program instances's owner, if any.  It may change if the
+/// program is suspended and resumed.
 pub async fn principal_id() -> Option<String> {
     get_id(CALL_PRINCIPAL_ID).await
 }
