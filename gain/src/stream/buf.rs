@@ -38,6 +38,11 @@ impl Buf {
         }
     }
 
+    /// Returns `true` if nothing is buffered.
+    pub fn is_empty(&self) -> bool {
+        self.data.is_empty()
+    }
+
     /// Returns the number of buffered bytes.
     pub fn len(&self) -> usize {
         self.data.len()
@@ -83,7 +88,7 @@ pub trait Read {
     ///
     /// The value returned by the receptor is passed through.  If the stream
     /// has been closed, the default value is returned.
-    fn buf_read<'a, R, T>(&'a mut self, min_read: usize, receptor: R) -> future::BufRead<'a, R, T>
+    fn buf_read<R, T>(&'_ mut self, min_read: usize, receptor: R) -> future::BufRead<'_, R, T>
     where
         R: FnOnce(&mut Buf) -> T + Unpin,
         T: Default;
@@ -112,7 +117,7 @@ pub mod future {
             let mut buf = m.shared.borrow_mut();
 
             if !buf.data.is_empty() {
-                Poll::Ready(io::Read::read(&mut *buf, &mut m.dest))
+                Poll::Ready(io::Read::read(&mut *buf, m.dest))
             } else {
                 match buf.result {
                     BufResult::Pending => {
@@ -246,7 +251,7 @@ impl Read for ReadStream {
         }
     }
 
-    fn buf_read<'a, R, T>(&'a mut self, min_read: usize, receptor: R) -> future::BufRead<'a, R, T>
+    fn buf_read<R, T>(&'_ mut self, min_read: usize, receptor: R) -> future::BufRead<'_, R, T>
     where
         R: FnOnce(&mut Buf) -> T + Unpin,
         T: Default,
@@ -270,6 +275,7 @@ impl Close for ReadStream {
 }
 
 /// Bidirectional stream with input buffering.
+#[derive(Default)]
 pub struct ReadWriteStream {
     r: ReadStream,
     w: WriteOnlyStream,
@@ -292,15 +298,6 @@ impl ReadWriteStream {
     }
 }
 
-impl Default for ReadWriteStream {
-    fn default() -> Self {
-        Self {
-            r: Default::default(),
-            w: Default::default(),
-        }
-    }
-}
-
 impl From<RecvWriteStream> for ReadWriteStream {
     fn from(stream: RecvWriteStream) -> Self {
         Self::new(stream)
@@ -312,7 +309,7 @@ impl Read for ReadWriteStream {
         self.r.read(dest)
     }
 
-    fn buf_read<'a, R, T>(&'a mut self, min_read: usize, receptor: R) -> future::BufRead<'a, R, T>
+    fn buf_read<R, T>(&'_ mut self, min_read: usize, receptor: R) -> future::BufRead<R, T>
     where
         R: FnOnce(&mut Buf) -> T + Unpin,
         T: Default,

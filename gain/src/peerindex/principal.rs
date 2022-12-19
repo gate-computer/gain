@@ -5,9 +5,8 @@
 //! Find your program instances.
 
 use std::convert::TryInto;
-use std::str;
 
-use crate::peer;
+use crate::peer::{register_group, Listener};
 use crate::peerindex::Error;
 use crate::service::Service;
 
@@ -21,8 +20,8 @@ lazy_static! {
 /// Register this program instance in the index.  The listener is invoked when
 /// a peer tries to connect and there isn't an ongoing connection process with
 /// that peer.
-pub async fn register(listener: Box<dyn Fn(&str, &str)>) {
-    peer::register_group(GROUP_NAME, listener).await;
+pub async fn register(listener: Listener) {
+    register_group(GROUP_NAME, listener).await;
     SERVICE.send_info(&[]).await;
 }
 

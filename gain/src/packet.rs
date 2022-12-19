@@ -37,8 +37,11 @@ pub fn pad_len(size: usize) -> isize {
 }
 
 pub fn header_into(p: &mut [u8], size: usize, code: Code, domain: Domain) -> &mut [u8] {
-    p[0..].as_mut().write(&(size as u32).to_le_bytes()).unwrap();
-    p[4..].as_mut().write(&code.to_le_bytes()).unwrap();
+    p[0..]
+        .as_mut()
+        .write_all(&(size as u32).to_le_bytes())
+        .unwrap();
+    p[4..].as_mut().write_all(&code.to_le_bytes()).unwrap();
     p[6] = domain;
     p[7] = 0;
     &mut p[HEADER_SIZE..]
@@ -76,8 +79,11 @@ pub struct Flow {
 
 pub fn flow_into(p: &mut [u8], index: usize, id: StreamId, increment: i32) {
     let flow = &mut p[HEADER_SIZE + FLOW_SIZE * index..];
-    flow[0..].as_mut().write(&id.to_le_bytes()).unwrap();
-    flow[4..].as_mut().write(&increment.to_le_bytes()).unwrap();
+    flow[0..].as_mut().write_all(&id.to_le_bytes()).unwrap();
+    flow[4..]
+        .as_mut()
+        .write_all(&increment.to_le_bytes())
+        .unwrap();
 }
 
 pub fn flow(p: &[u8], index: usize) -> Flow {
@@ -90,8 +96,11 @@ pub fn flow(p: &[u8], index: usize) -> Flow {
 
 pub fn data_header_into(p: &mut [u8], size: usize, code: Code, id: StreamId, note: Note) {
     let content = header_into(p, size, code, DOMAIN_DATA);
-    content[0..].as_mut().write(&id.to_le_bytes()).unwrap();
-    content[4..].as_mut().write(&note.to_le_bytes()).unwrap();
+    content[0..].as_mut().write_all(&id.to_le_bytes()).unwrap();
+    content[4..]
+        .as_mut()
+        .write_all(&note.to_le_bytes())
+        .unwrap();
 }
 
 #[inline]
@@ -106,10 +115,13 @@ pub fn data_note(p: &[u8]) -> i32 {
 
 pub fn services_header_into(p: &mut [u8], size: usize, count: u16) {
     let content = header_into(p, size, CODE_SERVICES, DOMAIN_CALL);
-    content[0..].as_mut().write(&count.to_le_bytes()).unwrap();
+    content[0..]
+        .as_mut()
+        .write_all(&count.to_le_bytes())
+        .unwrap();
 }
 
-pub fn service_states<'a>(p: &'a [u8]) -> &'a [ServiceStateFlags] {
+pub fn service_states(p: &'_ [u8]) -> &'_ [ServiceStateFlags] {
     let count = u16::from_le_bytes(p[HEADER_SIZE..SERVICES_HEADER_SIZE].try_into().unwrap());
     &p[SERVICES_HEADER_SIZE..SERVICES_HEADER_SIZE + count as usize]
 }

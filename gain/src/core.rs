@@ -76,7 +76,7 @@ impl ServiceState {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 struct RecvSpan {
     off: usize,
     end: usize,
@@ -88,12 +88,6 @@ impl RecvSpan {
     }
 }
 
-impl Default for RecvSpan {
-    fn default() -> Self {
-        Self { off: 0, end: 0 }
-    }
-}
-
 struct RecvBuf {
     buf: Vec<u8>,
     head: RecvSpan,
@@ -101,11 +95,11 @@ struct RecvBuf {
 }
 
 impl RecvBuf {
-    fn head_slice<'a>(&'a self) -> &'a [u8] {
+    fn head_slice(&'_ self) -> &'_ [u8] {
         &self.buf[self.head.off..self.head.end]
     }
 
-    fn consume<'a>(&'a mut self, off: usize) -> &'a [u8] {
+    fn consume(&'_ mut self, off: usize) -> &'_ [u8] {
         if self.head.off != off {
             die("consumed offset not found at head of receive buffer");
         }
@@ -130,11 +124,8 @@ impl RecvBuf {
 impl Default for RecvBuf {
     fn default() -> Self {
         // Array caused out-of-bounds memory access when RECV_BUF is borrowed.
-        let mut buf = Vec::with_capacity(MAX_RECV_SIZE * 2);
-        buf.resize(MAX_RECV_SIZE * 2, 0);
-
         Self {
-            buf,
+            buf: vec![0; MAX_RECV_SIZE * 2],
             head: RecvSpan::default(),
             tail: RecvSpan::default(),
         }
@@ -195,8 +186,8 @@ pub struct StreamState {
 impl StreamState {
     fn new(code: Code, id: StreamId, flags: StreamFlags) -> Self {
         StreamState {
-            code: code,
-            id: id,
+            code,
+            id,
             flags,
 
             recv: Recv::None,
@@ -372,7 +363,7 @@ impl SendLink {
     }
 
     fn take(&mut self) -> Self {
-        let link = self.clone();
+        let link = *self;
         self.addr = 0;
         link
     }
@@ -774,7 +765,7 @@ where
 
                 if let Some(n) = self
                     .unsubscribed
-                    .checked_add((self.receptor)(&data, note) as u64)
+                    .checked_add((self.receptor)(data, note) as u64)
                 {
                     self.unsubscribed = n;
                 } else {
@@ -986,7 +977,7 @@ impl Drop for StreamCloseFuture {
     fn drop(&mut self) {
         let this = unsafe { Pin::new_unchecked(self) }; // See pin module doc.
 
-        if !this.s.is_none() {
+        if this.s.is_some() {
             die("close future dropped before completion");
         }
     }

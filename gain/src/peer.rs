@@ -16,22 +16,29 @@ use crate::stream::RecvWriteStream;
 use crate::task::spawn_local;
 use crate::threadunsafe::ThreadUnsafeRefCell;
 
+pub type Listener = Box<dyn Fn(&str, &str)>;
+
+type ConnKey = (Vec<u8>, Vec<u8>);
+type ConnSender = Sender<(RecvWriteStream, String)>;
+
 lazy_static! {
     static ref SERVICE: Service = Service::register("peer");
-    static ref GROUPS: ThreadUnsafeRefCell<HashMap<Vec<u8>, Box<dyn Fn(&str, &str)>>> =
-        Default::default();
-    static ref CONNS: ThreadUnsafeRefCell<HashMap<(Vec<u8>, Vec<u8>), Sender<(RecvWriteStream, String)>>> =
-        Default::default();
+    static ref GROUPS: ThreadUnsafeRefCell<HashMap<Vec<u8>, Listener>> = Default::default();
+    static ref CONNS: ThreadUnsafeRefCell<HashMap<ConnKey, ConnSender>> = Default::default();
 }
 
 /// Register a peer group implementation.
-pub async fn register_group(group_name: &str, listener: Box<dyn Fn(&str, &str)>) {
-    let mut groups = GROUPS.borrow_mut();
-    let init = groups.is_empty();
+pub async fn register_group(group_name: &str, listener: Listener) {
+    let init = {
+        let mut groups = GROUPS.borrow_mut();
+        let init = groups.is_empty();
 
-    if groups.insert(group_name.into(), listener).is_some() {
-        panic!("peer group {} already registered", group_name);
-    }
+        if groups.insert(group_name.into(), listener).is_some() {
+            panic!("peer group {} already registered", group_name);
+        }
+
+        init
+    };
 
     if init {
         spawn_local(handle_info_packets());
@@ -39,7 +46,7 @@ pub async fn register_group(group_name: &str, listener: Box<dyn Fn(&str, &str)>)
     }
 }
 
-fn parse_name<'a>(b: &'a [u8]) -> (&'a [u8], &'a [u8]) {
+fn parse_name(b: &'_ [u8]) -> (&'_ [u8], &'_ [u8]) {
     let size = b[0] as usize;
     let b = &b[1..];
     let name = &b[..size];

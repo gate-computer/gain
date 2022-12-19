@@ -93,21 +93,21 @@ impl Recv for RecvWriteStream {
     where
         R: Fn(&[u8], i32) -> usize + Unpin,
     {
-        future::Recv::new(&mut self.s, capacity, receptor)
+        future::Recv::new(&self.s, capacity, receptor)
     }
 }
 
 impl Write for RecvWriteStream {
     fn write<'a>(&'a mut self, data: &'a [u8]) -> future::Write {
-        future::Write::new(&mut self.s, data, 0)
+        future::Write::new(&self.s, data, 0)
     }
 
     fn write_note<'a>(&'a mut self, data: &'a [u8], note: i32) -> future::Write {
-        future::Write::new(&mut self.s, data, note)
+        future::Write::new(&self.s, data, note)
     }
 
     fn write_all<'a>(&'a mut self, data: &'a [u8]) -> future::WriteAll {
-        future::WriteAll::new(&mut self.s, data)
+        future::WriteAll::new(&self.s, data)
     }
 }
 
@@ -168,7 +168,7 @@ impl Recv for RecvStream {
     where
         R: Fn(&[u8], i32) -> usize + Unpin,
     {
-        future::Recv::new(&mut self.s, capacity, receptor)
+        future::Recv::new(&self.s, capacity, receptor)
     }
 }
 
@@ -210,7 +210,7 @@ impl Recv for RecvOnlyStream {
     where
         R: Fn(&[u8], i32) -> usize + Unpin,
     {
-        future::Recv::new(&mut self.s, capacity, receptor)
+        future::Recv::new(&self.s, capacity, receptor)
     }
 }
 
@@ -255,15 +255,15 @@ impl From<RecvWriteStream> for WriteStream {
 
 impl Write for WriteStream {
     fn write<'a>(&'a mut self, data: &'a [u8]) -> future::Write {
-        future::Write::new(&mut self.s, data, 0)
+        future::Write::new(&self.s, data, 0)
     }
 
     fn write_note<'a>(&'a mut self, data: &'a [u8], note: i32) -> future::Write {
-        future::Write::new(&mut self.s, data, note)
+        future::Write::new(&self.s, data, note)
     }
 
     fn write_all<'a>(&'a mut self, data: &'a [u8]) -> future::WriteAll {
-        future::WriteAll::new(&mut self.s, data)
+        future::WriteAll::new(&self.s, data)
     }
 }
 
@@ -302,15 +302,15 @@ impl Default for WriteOnlyStream {
 
 impl Write for WriteOnlyStream {
     fn write<'a>(&'a mut self, data: &'a [u8]) -> future::Write {
-        future::Write::new(&mut self.s, data, 0)
+        future::Write::new(&self.s, data, 0)
     }
 
     fn write_note<'a>(&'a mut self, data: &'a [u8], note: i32) -> future::Write {
-        future::Write::new(&mut self.s, data, note)
+        future::Write::new(&self.s, data, note)
     }
 
     fn write_all<'a>(&'a mut self, data: &'a [u8]) -> future::WriteAll {
-        future::WriteAll::new(&mut self.s, data)
+        future::WriteAll::new(&self.s, data)
     }
 }
 

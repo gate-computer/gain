@@ -54,4 +54,4 @@ pub async fn restrict(scope: &[&str]) {
 }
 
 /// Represents system access.
-pub const SCOPE_SYSTEM: &'static str = "program:system";
+pub const SCOPE_SYSTEM: &str = "program:system";
