@@ -98,8 +98,8 @@ pub async fn request(
                 content: {
                     let mut v = Vec::new();
                     if let Some(b) = r.body() {
-                        v.reserve(b.len());
-                        v.extend_from_slice(b);
+                        v.reserve_exact(b.len());
+                        v.extend_from_slice(b.bytes());
                     }
                     v
                 },

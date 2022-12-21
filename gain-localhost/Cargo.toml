@@ -12,7 +12,7 @@ categories = ["api-bindings", "asynchronous", "network-programming"]
 license = "MIT"
 
 [dependencies]
-flatbuffers = "2.0.0"
+flatbuffers = "22.10.26"
 gain = { version = ">=0.4.0, <1", path = "../gain" }
 gain-lep = { version = ">=0.1.2, <1", path = "../gain-lep", optional = true }
 lazy_static = "1.4.0"

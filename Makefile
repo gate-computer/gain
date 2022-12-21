@@ -33,7 +33,7 @@ check-%: %
 
 .PHONY: generate
 generate:
-	$(FLATC) --rust -o gain-localhost/src ../gate-localhost/localhost.fbs
+	$(FLATC) --rust -o gain-localhost/src ../gate/localhost/localhost.fbs
 
 .PHONY: clean
 clean:
