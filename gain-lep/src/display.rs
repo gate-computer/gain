@@ -36,7 +36,9 @@ pub fn stringify_ex<F: Fn(&Obj) -> Option<String> + Clone>(x: &Obj, f: F) -> Opt
                     let s = match res {
                         Ok(ref value) => {
                             let mut s = "Future<".to_string();
-                            s.push_str(&stringify_ex(&value, f.clone()).unwrap_or("?".to_string()));
+                            s.push_str(
+                                &stringify_ex(value, f.clone()).unwrap_or_else(|| "?".to_string()),
+                            );
                             s.push('>');
                             s
                         }

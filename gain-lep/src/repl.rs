@@ -9,23 +9,19 @@ use lep::{eval_stmt, obj, Domain, State};
 use crate::{obj_future, stringify};
 
 /// Read, evaluate and print in a loop.
-pub async fn repl<'a>(
-    conn: RecvWriteStream,
-    domain: Domain<'a>,
-    state: State,
-) -> (Domain<'a>, State) {
-    repl_default(conn, domain, state, || vec!['\r' as u8]).await
+pub async fn repl(conn: RecvWriteStream, domain: Domain<'_>, state: State) -> (Domain<'_>, State) {
+    repl_default(conn, domain, state, || vec![b'\r']).await
 }
 
 /// Read, evaluate and print in a loop.
 ///
 /// The default reply function is invoked when an empty line is entered.
-pub async fn repl_default<'a, DefaultFn: Fn() -> Vec<u8>>(
+pub async fn repl_default<DefaultFn: Fn() -> Vec<u8>>(
     conn: RecvWriteStream,
-    mut domain: Domain<'a>,
+    mut domain: Domain<'_>,
     mut state: State,
     default_reply: DefaultFn,
-) -> (Domain<'a>, State) {
+) -> (Domain<'_>, State) {
     let mut conn = ReadWriteStream::new(conn);
 
     let mut buf = Vec::new();
@@ -55,7 +51,7 @@ pub async fn repl_default<'a, DefaultFn: Fn() -> Vec<u8>>(
         let mut input: Option<String> = None;
         let mut output = String::new();
         for i in 0..buf.len() {
-            if buf[i] == '\n' as u8 {
+            if buf[i] == b'\n' {
                 let tail = buf.split_off(i + 1);
                 buf.resize(i, 0);
 
@@ -71,7 +67,7 @@ pub async fn repl_default<'a, DefaultFn: Fn() -> Vec<u8>>(
 
         if let Some(input) = input {
             if input.trim_start().is_empty() {
-                output = String::from_utf8_lossy(&default_reply().as_slice()).to_string();
+                output = String::from_utf8_lossy(default_reply().as_slice()).to_string();
             } else {
                 match eval_stmt(&mut domain, state.clone(), &input) {
                     Ok(new_state) => {
@@ -82,7 +78,7 @@ pub async fn repl_default<'a, DefaultFn: Fn() -> Vec<u8>>(
                                 Ok(value) => {
                                     output = format!(
                                         "{}\n",
-                                        stringify(&value).unwrap_or("?".to_string())
+                                        stringify(&value).unwrap_or_else(|| "?".to_string())
                                     );
                                     state = new_state.with_result(value);
                                 }
@@ -95,7 +91,7 @@ pub async fn repl_default<'a, DefaultFn: Fn() -> Vec<u8>>(
                             output = format!(
                                 "{} = {}\n",
                                 name,
-                                stringify(value).unwrap_or("?".to_string())
+                                stringify(value).unwrap_or_else(|| "?".to_string())
                             );
                             state = new_state;
                         }
