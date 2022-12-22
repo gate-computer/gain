@@ -1239,6 +1239,8 @@ fn perform_io() -> u64 {
             if packet_head.len() >= HEADER_SIZE {
                 let packet_size = packet::align(packet::size(packet_head));
                 let packet_end = recv_buf.head.off + packet_size;
+
+                #[allow(clippy::if_same_then_else)]
                 if packet_end < MAX_RECV_SIZE {
                     // ...rest of first half of RECV_BUF.
                     recv_buf.head.end += recv_len;
