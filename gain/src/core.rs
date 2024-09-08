@@ -304,7 +304,7 @@ impl SendList {
         for _ in 1..index {
             prev = prev.as_mut().unwrap().next;
         }
-        let mut prev_share = prev.as_mut().unwrap();
+        let prev_share = prev.as_mut().unwrap();
         let mut old = prev_share.next.take();
         let old_share = old.as_mut().unwrap();
         prev_share.next = old_share.next.take();
